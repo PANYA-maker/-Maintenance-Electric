@@ -63,7 +63,7 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
-            0 { transform: rotate(0deg); }
+            0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
     </style>
@@ -268,26 +268,26 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <!-- Metric Selector Toggle -->
                     <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                        <button id="btnMetricLoss" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all bg-blue-600 text-white shadow-sm" onclick="changeTrendMetric('loss')">
+                        <button id="btnMetricLoss" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all bg-blue-600 text-white shadow-sm">
                             % Loss
                         </button>
-                        <button id="btnMetricMTTR" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" onclick="changeTrendMetric('mttr')">
+                        <button id="btnMetricMTTR" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900">
                             MTTR
                         </button>
-                        <button id="btnMetricMTBF" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" onclick="changeTrendMetric('mtbf')">
+                        <button id="btnMetricMTBF" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900">
                             MTBF
                         </button>
                     </div>
 
                     <!-- Toggle Period Control -->
                     <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                        <button id="btnTrendDay" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('day')">
+                        <button id="btnTrendDay" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all">
                             รายวัน (Day)
                         </button>
-                        <button id="btnTrendWeek" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('week')">
+                        <button id="btnTrendWeek" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all">
                             รายสัปดาห์ (Week)
                         </button>
-                        <button id="btnTrendMonth" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('month')">
+                        <button id="btnTrendMonth" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all">
                             รายเดือน (Month)
                         </button>
                     </div>
@@ -478,6 +478,7 @@
                 document.getElementById('lastUpdateText').innerText = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
 
                 setupFilters();
+                setupInteractiveControls(); // Register direct listeners to bypass scoping bugs
                 changeTrendInterval('day'); // Initializes and updates trend chart & dashboard
                 
             } catch (error) {
@@ -541,18 +542,33 @@
             });
         }
 
+        // Bind interactive event listeners for metrics and intervals directly (removes dependency on inline html onclick triggers)
+        function setupInteractiveControls() {
+            // Metric click triggers
+            document.getElementById('btnMetricLoss').addEventListener('click', () => changeTrendMetric('loss'));
+            document.getElementById('btnMetricMTTR').addEventListener('click', () => changeTrendMetric('mttr'));
+            document.getElementById('btnMetricMTBF').addEventListener('click', () => changeTrendMetric('mtbf'));
+
+            // Time grouping interval triggers
+            document.getElementById('btnTrendDay').addEventListener('click', () => changeTrendInterval('day'));
+            document.getElementById('btnTrendWeek').addEventListener('click', () => changeTrendInterval('week'));
+            document.getElementById('btnTrendMonth').addEventListener('click', () => changeTrendInterval('month'));
+        }
+
         // Switch Trend Graph Metric
         function changeTrendMetric(metric) {
             currentTrendMetric = metric;
             const metrics = ['loss', 'mttr', 'mtbf'];
             metrics.forEach(m => {
                 const btn = document.getElementById('btnMetric' + m.charAt(0).toUpperCase() + m.slice(1));
-                if (m === metric) {
-                    btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
-                    btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
-                } else {
-                    btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
-                    btn.classList.add('text-slate-600', 'hover:text-slate-900');
+                if (btn) {
+                    if (m === metric) {
+                        btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                    } else {
+                        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                    }
                 }
             });
             updateDashboard();
@@ -564,12 +580,14 @@
             const buttons = ['day', 'week', 'month'];
             buttons.forEach(b => {
                 const btn = document.getElementById('btnTrend' + b.charAt(0).toUpperCase() + b.slice(1));
-                if (b === interval) {
-                    btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
-                    btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
-                } else {
-                    btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
-                    btn.classList.add('text-slate-600', 'hover:text-slate-900');
+                if (btn) {
+                    if (b === interval) {
+                        btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                    } else {
+                        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                    }
                 }
             });
             updateDashboard();
@@ -690,14 +708,13 @@
             renderTrendChart(startDate, endDate, fMachine, filteredDaily);
         }
 
-        // Job Type Summary Builder with Total Jobs count included
+        // Job Type Summary Builder with Premium Total Jobs card adjusted according to user request
         function updateJobTypeSummary(data) {
             const summaryGrid = document.getElementById('jobTypeSummaryGrid');
             summaryGrid.innerHTML = '';
 
             const jobTypes = {};
             let totalJobsCount = 0;
-            let totalDowntimeAll = 0;
 
             data.forEach(row => {
                 const jt = row['ประเภทงาน']?.trim() || 'ไม่ระบุ';
@@ -708,21 +725,20 @@
                 jobTypes[jt].downtime += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
                 
                 totalJobsCount += 1;
-                totalDowntimeAll += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
             });
 
-            // Card 1: Total Jobs Card (Always at the beginning, premium indigo styling)
+            // Card 1: Premium Total Jobs Card (Minutes removed entirely, text sizes maximized)
             const totalCard = document.createElement('div');
-            totalCard.className = `flex items-center p-3.5 rounded-xl border bg-slate-800 text-white border-slate-700 transition-all duration-200 hover:shadow-sm`;
+            totalCard.className = `flex items-center p-4 rounded-xl border bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700 transition-all duration-200 hover:shadow-md col-span-2 sm:col-span-1`;
             totalCard.innerHTML = `
-                <div class="p-2.5 rounded-lg bg-slate-700 mr-3 shadow-2xs text-amber-400">
-                    <i class="fa-solid fa-layer-group text-lg"></i>
+                <div class="p-3 rounded-lg bg-slate-700 mr-3 shadow-2xs text-amber-400 shrink-0">
+                    <i class="fa-solid fa-layer-group text-xl"></i>
                 </div>
                 <div class="overflow-hidden">
-                    <p class="text-xs font-semibold text-slate-300 truncate">งานทั้งหมด (Total)</p>
-                    <div class="flex items-baseline space-x-1.5 mt-0.5">
-                        <span class="text-lg font-bold">${totalJobsCount} <span class="text-xs font-normal">งาน</span></span>
-                        <span class="text-[10px] text-slate-400">(${totalDowntimeAll} น.)</span>
+                    <p class="text-xs font-bold text-slate-300 truncate tracking-wider uppercase">งานทั้งหมด (Total)</p>
+                    <div class="flex items-baseline mt-1">
+                        <span class="text-2xl md:text-3xl font-extrabold text-white">${totalJobsCount}</span>
+                        <span class="text-xs font-medium text-slate-300 ml-1.5">งาน</span>
                     </div>
                 </div>
             `;
@@ -761,7 +777,7 @@
             });
         }
 
-        // Interactive Trend Line Chart with calendar week, smooth lines, custom colors, targets, and colored datalabels
+        // Interactive Trend Line Chart with smooth lines, custom target validation, and single value metrics
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {};
             let temp = new Date(startDate);
@@ -902,7 +918,7 @@
                             borderColor: config.lineColor, 
                             backgroundColor: config.bgColor,
                             borderWidth: 3.5,
-                            tension: 0.4, // Beautiful curves
+                            tension: 0.4, // Beautiful smooth curves
                             pointRadius: 6,
                             pointBackgroundColor: config.lineColor,
                             pointHoverRadius: 9,
@@ -930,15 +946,12 @@
                                 },
                                 font: {
                                     family: 'Prompt',
-                                    size: 9,
+                                    size: 10,
                                     weight: 'bold'
                                 },
-                                formatter: function(value, context) {
-                                    const index = context.dataIndex;
-                                    const key = sortedKeys[index];
-                                    if (!key) return '';
-                                    const group = groups[key];
-                                    return `${value.toLocaleString()}${config.suffix}\n(${group.downtime.toLocaleString()} น. / ${group.freq} ครั้ง)`;
+                                // Cleaned up output value: Only show metric values without the crowded bracket stats
+                                formatter: function(value) {
+                                    return `${value.toLocaleString()}${config.suffix}`;
                                 },
                                 textAlign: 'center',
                                 padding: 6
@@ -1229,12 +1242,17 @@
                 
                 let machineStation = `<span class="font-bold text-slate-700">${row['เครื่องจักร'] || '-'}</span><br><span class="text-xs text-slate-400">${row['Station'] || '-'}</span>`;
                 
-                // คอลัมน์ หยุด(ครั้ง) / เวลา(นาที): ถ้าไม่มีข้อมูลจะไม่ขึ้นอะไรเลย
-                let stopFreq = parseFloat(row['จำนวนครั้งที่หยุด Actual']) || 0;
-                let stopTime = parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                // คอลัมน์ หยุด(ครั้ง) / เวลา(นาที): ถ้าไม่มีข้อมูลจะไม่ขึ้นอะไรเลย (เช็คทั้งค่าว่างและ 0)
+                let stopFreq = parseFloat(row['จำนวนครั้งที่หยุด Actual']);
+                let stopTime = parseFloat(row['เวลาหยุดเครื่อง Actual']);
                 let freqTime = "";
-                if (stopFreq > 0 || stopTime > 0) {
+                
+                if (!isNaN(stopFreq) && !isNaN(stopTime) && (stopFreq > 0 || stopTime > 0)) {
                     freqTime = `<span class="font-semibold text-amber-600">${stopFreq} ครั้ง</span><br><span class="text-xs text-rose-500 font-bold">${stopTime} นาที</span>`;
+                } else if (!isNaN(stopFreq) && stopFreq > 0) {
+                    freqTime = `<span class="font-semibold text-amber-600">${stopFreq} ครั้ง</span>`;
+                } else if (!isNaN(stopTime) && stopTime > 0) {
+                    freqTime = `<span class="text-xs text-rose-500 font-bold">${stopTime} นาที</span>`;
                 }
 
                 // คอลัมน์ อะไหล่ที่เปลี่ยน (จำนวน): ถ้าไม่มีข้อมูลจะไม่ขึ้นอะไรเลย
@@ -1243,11 +1261,12 @@
                 let partsQty = "";
 
                 // กรองคำที่ไม่ใช่การระบุรายการอะไหล่ที่เป็นชิ้นงาน
-                const noPartsWords = ["ไม่เปลี่ยนอะไหล่", "ไม่มีการเปลี่ยน", "ไม่มี", "-", "ปกติ", "ไม่ได้เปลี่ยนอะไหล่"];
-                const hasParts = parts && !noPartsWords.some(word => parts.includes(word));
+                const noPartsWords = ["ไม่เปลี่ยนอะไหล่", "ไม่มีการเปลี่ยน", "ไม่มี", "-", "ปกติ", "ไม่ได้เปลี่ยนอะไหล่", "null", "undefined", "0", "ไม่ต้องเปลี่ยน", "ไม่ต้องเปลี่ยนอะไหล่"];
+                const hasParts = parts && parts !== "" && !noPartsWords.some(word => parts.toLowerCase().includes(word) || word === parts.toLowerCase());
 
                 if (hasParts) {
-                    let qtyDisplay = qty ? ` (${qty})` : "";
+                    const hasQty = qty && qty !== "" && !noPartsWords.includes(qty.toLowerCase());
+                    let qtyDisplay = hasQty ? ` (${qty})` : "";
                     partsQty = parts + qtyDisplay;
                 }
 
