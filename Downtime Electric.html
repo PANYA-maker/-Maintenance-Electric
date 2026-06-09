@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Electric Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .card-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Custom Scrollbar for Table */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner mb-4"></div>
+        <h2 class="text-xl font-semibold text-gray-700">กำลังโหลดข้อมูล...</h2>
+        <p class="text-gray-500">กรุณารอสักครู่ กำลังดึงข้อมูลจาก Google Sheet</p>
+    </div>
+
+    <div class="min-h-screen p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+        
+        <!-- Header -->
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-blue-800 flex items-center">
+                    <i class="fa-solid fa-bolt text-yellow-500 mr-3"></i> Maintenance Electric Dashboard
+                </h1>
+                <p class="text-gray-500 mt-1 text-sm">ระบบติดตามสถานะการซ่อมบำรุงและประสิทธิภาพเครื่องจักร</p>
+            </div>
+            <div class="mt-4 md:mt-0 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                <i class="fa-regular fa-clock mr-2"></i>อัพเดทข้อมูลล่าสุด: <span id="lastUpdateText" class="font-semibold text-gray-700">-</span>
+            </div>
+        </header>
+
+        <!-- Filters Section -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700 border-b pb-2"><i class="fa-solid fa-filter mr-2"></i>ตัวกรองข้อมูล (Filters)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                <!-- Date Range -->
+                <div class="lg:col-span-1">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">ตั้งแต่วันที่</label>
+                    <input type="date" id="filterStartDate" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <div class="lg:col-span-1">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">ถึงวันที่</label>
+                    <input type="date" id="filterEndDate" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+
+                <!-- Dropdowns -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">เครื่องจักร (Machine)</label>
+                    <select id="filterMachine" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white">
+                        <option value="ALL">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Station</label>
+                    <select id="filterStation" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white">
+                        <option value="ALL">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">ประเภทงาน</label>
+                    <select id="filterJobType" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white">
+                        <option value="ALL">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">สถานะ</label>
+                    <select id="filterStatus" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white">
+                        <option value="ALL">ทั้งหมด</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-end lg:col-span-4">
+                    <button id="btnResetFilter" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-gray-300">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> ล้างตัวกรอง
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- KPI Cards Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            
+            <!-- Card 1: เวลาเดินงาน -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 card-hover">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">เวลาเดินงานรวม</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiOpTime">0</h3>
+                        <p class="text-xs text-gray-400 mt-1">นาที (Minutes)</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full text-blue-600">
+                        <i class="fa-solid fa-stopwatch text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: จำนวนครั้งที่หยุด -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-orange-500 card-hover">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">จำนวนครั้งที่หยุด</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiFreq">0</h3>
+                        <p class="text-xs text-gray-400 mt-1">ครั้ง (Times)</p>
+                    </div>
+                    <div class="bg-orange-100 p-3 rounded-full text-orange-600">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: เวลาสูญเสีย -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-red-500 card-hover">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">เวลาสูญเสีย (Downtime)</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiDowntime">0</h3>
+                        <p class="text-xs text-gray-400 mt-1">นาที (Minutes)</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full text-red-600">
+                        <i class="fa-solid fa-clock text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: % เวลาสูญเสีย -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-indigo-500 card-hover flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">% เวลาสูญเสีย</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiPercentLoss">0.00%</h3>
+                    </div>
+                    <div class="bg-indigo-100 p-3 rounded-full text-indigo-600">
+                        <i class="fa-solid fa-percent text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Target: <span class="font-semibold text-gray-700">1.10%</span></span>
+                    <span id="diffPercentLoss" class="font-semibold px-2 py-1 rounded bg-gray-100">-</span>
+                </div>
+            </div>
+
+            <!-- Card 5: MTTR -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-purple-500 card-hover flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">ระยะเวลาซ่อมเฉลี่ย (MTTR)</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiMTTR">0</h3>
+                        <p class="text-xs text-gray-400 mt-1">นาที / ครั้ง</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full text-purple-600">
+                        <i class="fa-solid fa-screwdriver-wrench text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Target: <span class="font-semibold text-gray-700"><= 15 นาที</span></span>
+                    <span id="diffMTTR" class="font-semibold px-2 py-1 rounded bg-gray-100">-</span>
+                </div>
+            </div>
+
+            <!-- Card 6: MTBF -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 border-l-4 border-l-teal-500 card-hover flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">ระยะห่างการเสีย (MTBF)</p>
+                        <h3 class="text-3xl font-bold text-gray-800 mt-1" id="kpiMTBF">0</h3>
+                        <p class="text-xs text-gray-400 mt-1">นาที</p>
+                    </div>
+                    <div class="bg-teal-100 p-3 rounded-full text-teal-600">
+                        <i class="fa-solid fa-heart-pulse text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Target: <span class="font-semibold text-gray-700">>= 1200 นาที</span></span>
+                    <span id="diffMTBF" class="font-semibold px-2 py-1 rounded bg-gray-100">-</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Charts Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">สัดส่วนเวลาสูญเสียแยกตามเครื่องจักร</h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="machineDowntimeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">Top 5 Station ที่หยุดบ่อยที่สุด</h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="stationFreqChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Table Section -->
+        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h2 class="text-lg font-semibold text-gray-700"><i class="fa-solid fa-table-list mr-2"></i>รายละเอียดรายการแจ้งซ่อม</h2>
+                <span class="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">พบ <span id="tableRecordCount" class="font-bold text-blue-600">0</span> รายการ</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                        <tr>
+                            <th scope="col" class="px-4 py-3 min-w-[100px]">วันที่</th>
+                            <th scope="col" class="px-4 py-3 min-w-[150px]">เครื่องจักร / Station</th>
+                            <th scope="col" class="px-4 py-3 min-w-[200px]">ปัญหาความขัดข้อง</th>
+                            <th scope="col" class="px-4 py-3 min-w-[200px]">สาเหตุที่ตรวจพบ</th>
+                            <th scope="col" class="px-4 py-3 min-w-[200px]">การแก้ไขและป้องกัน</th>
+                            <th scope="col" class="px-4 py-3 min-w-[120px]">หยุด(ครั้ง) / เวลา(นาที)</th>
+                            <th scope="col" class="px-4 py-3 min-w-[150px]">อะไหล่ที่เปลี่ยน (จำนวน)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Table rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Google Sheets CSV Export URLs
+        const URL_SHEET_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
+        const URL_SHEET_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
+
+        // Global Data Variables
+        let dailyData = [];
+        let opTimeData = [];
+        let charts = {};
+
+        // Helper: Parse Thai Date format (DD/MM/YYYY) to JS Date Object
+        function parseThaiDate(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                // Handle year mapping (sometimes it's 2568, sometimes 2025)
+                let year = parseInt(parts[2]);
+                if (year > 2500) year -= 543; 
+                return new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+            }
+            return new Date(dateStr); // Fallback
+        }
+
+        // Helper: Format Date for Inputs (YYYY-MM-DD)
+        function formatDateForInput(date) {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Helper: Format Date for Display (DD/MM/YYYY)
+        function formatDateForDisplay(dateStr) {
+            const d = parseThaiDate(dateStr);
+            if(!d || isNaN(d)) return dateStr;
+            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+
+        // Initialize Application
+        async function initApp() {
+            try {
+                // Fetch both CSVs concurrently
+                const [resDaily, resOpTime] = await Promise.all([
+                    fetch(URL_SHEET_DAILY),
+                    fetch(URL_SHEET_OPTIME)
+                ]);
+
+                const csvDaily = await resDaily.text();
+                const csvOpTime = await resOpTime.text();
+
+                // Parse CSV to JSON
+                Papa.parse(csvDaily, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        dailyData = results.data;
+                    }
+                });
+
+                Papa.parse(csvOpTime, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        opTimeData = results.data;
+                    }
+                });
+
+                // Hide loading
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                // Update timestamp
+                const now = new Date();
+                document.getElementById('lastUpdateText').innerText = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
+
+                setupFilters();
+                updateDashboard();
+
+            } catch (error) {
+                console.error("Error loading data:", error);
+                document.getElementById('loadingOverlay').innerHTML = `<div class="text-red-500 text-xl font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>เกิดข้อผิดพลาดในการโหลดข้อมูล</div><p class="text-gray-600 mt-2">โปรดตรวจสอบการเชื่อมต่ออินเตอร์เน็ตหรือสิทธิ์การเข้าถึงไฟล์</p>`;
+            }
+        }
+
+        // Setup UI Filters
+        function setupFilters() {
+            // Find min/max dates to set defaults
+            let dates = dailyData.map(r => parseThaiDate(r['วันที่'])).filter(d => d != null && !isNaN(d));
+            if(dates.length > 0) {
+                // Sort dates
+                dates.sort((a,b) => a - b);
+                const minDate = dates[0];
+                const maxDate = dates[dates.length - 1];
+                
+                // Default to last 30 days or minDate if less than 30 days data
+                const defaultStart = new Date(maxDate);
+                defaultStart.setDate(defaultStart.getDate() - 30);
+                
+                document.getElementById('filterStartDate').value = formatDateForInput(defaultStart > minDate ? defaultStart : minDate);
+                document.getElementById('filterEndDate').value = formatDateForInput(maxDate);
+            }
+
+            // Populate Dropdowns uniquely
+            const populateDropdown = (selectId, colName) => {
+                const select = document.getElementById(selectId);
+                const uniqueValues = [...new Set(dailyData.map(item => item[colName]?.trim()).filter(val => val))].sort();
+                uniqueValues.forEach(val => {
+                    const option = document.createElement('option');
+                    option.value = val;
+                    option.textContent = val;
+                    select.appendChild(option);
+                });
+            };
+
+            populateDropdown('filterMachine', 'เครื่องจักร');
+            populateDropdown('filterStation', 'Station');
+            populateDropdown('filterJobType', 'ประเภทงาน');
+            populateDropdown('filterStatus', 'สถานะ');
+
+            // Event Listeners for filters
+            const filterInputs = ['filterStartDate', 'filterEndDate', 'filterMachine', 'filterStation', 'filterJobType', 'filterStatus'];
+            filterInputs.forEach(id => {
+                document.getElementById(id).addEventListener('change', updateDashboard);
+            });
+
+            document.getElementById('btnResetFilter').addEventListener('click', () => {
+                document.getElementById('filterMachine').value = 'ALL';
+                document.getElementById('filterStation').value = 'ALL';
+                document.getElementById('filterJobType').value = 'ALL';
+                document.getElementById('filterStatus').value = 'ALL';
+                updateDashboard();
+            });
+        }
+
+        // Main Update Logic
+        function updateDashboard() {
+            // 1. Get Filter Values
+            const startStr = document.getElementById('filterStartDate').value;
+            const endStr = document.getElementById('filterEndDate').value;
+            const startDate = startStr ? new Date(startStr) : new Date('1970-01-01');
+            const endDate = endStr ? new Date(endStr) : new Date('2100-01-01');
+            // Include end of day for endDate
+            endDate.setHours(23, 59, 59, 999);
+
+            const fMachine = document.getElementById('filterMachine').value;
+            const fStation = document.getElementById('filterStation').value;
+            const fJobType = document.getElementById('filterJobType').value;
+            const fStatus = document.getElementById('filterStatus').value;
+
+            // 2. Filter Daily Data
+            const filteredDaily = dailyData.filter(row => {
+                const rowDate = parseThaiDate(row['วันที่']);
+                if (!rowDate || isNaN(rowDate)) return false;
+                
+                let matchDate = (rowDate >= startDate && rowDate <= endDate);
+                let matchMachine = fMachine === 'ALL' || row['เครื่องจักร'] === fMachine;
+                let matchStation = fStation === 'ALL' || row['Station'] === fStation;
+                let matchJobType = fJobType === 'ALL' || row['ประเภทงาน'] === fJobType;
+                let matchStatus = fStatus === 'ALL' || row['สถานะ'] === fStatus;
+
+                return matchDate && matchMachine && matchStation && matchJobType && matchStatus;
+            });
+
+            // 3. Filter Operation Time Data & Calculate Operation Time
+            let totalOpTime = 0;
+            opTimeData.forEach(row => {
+                const rowDate = parseThaiDate(row['วันที่']);
+                if (rowDate && rowDate >= startDate && rowDate <= endDate) {
+                    let bhs = parseFloat(row['เวลาเดินงาน BHS ACTUAL']) || 0;
+                    let yueli = parseFloat(row['เวลาเดินงาน YUELI ACTUAL']) || 0;
+                    let isowa = parseFloat(row['เวลาเดินงาน ISOWA ACTUAL']) || 0;
+
+                    if (fMachine === 'BHS') totalOpTime += bhs;
+                    else if (fMachine === 'YUELI') totalOpTime += yueli;
+                    else if (fMachine === 'ISOWA') totalOpTime += isowa;
+                    else if (fMachine === 'ALL') totalOpTime += (bhs + yueli + isowa);
+                    // If filter is specific to a sub-machine not in these 3, we might need custom logic, 
+                    // but based on prompt, we separate by BHS, YUELI, ISOWA.
+                }
+            });
+
+            // 4. Calculate KPIs from Filtered Daily Data
+            let totalDowntime = 0;
+            let totalFreq = 0;
+
+            filteredDaily.forEach(row => {
+                totalDowntime += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                totalFreq += parseFloat(row['จำนวนครั้งที่หยุด Actual']) || 0;
+            });
+
+            // Math
+            const percentLoss = totalOpTime > 0 ? (totalDowntime / totalOpTime) * 100 : 0;
+            const mttr = totalFreq > 0 ? (totalDowntime / totalFreq) : 0;
+            const mtbf = totalFreq > 0 ? ((totalOpTime - totalDowntime) / totalFreq) : 0;
+
+            // Targets
+            const targetLoss = 1.10;
+            const targetMTTR = 15;
+            const targetMTBF = 1200;
+
+            // 5. Update DOM
+            // Formatting helper function for diffs
+            const formatDiff = (actual, target, logic) => {
+                let diff = actual - target;
+                let isGood = false;
+                
+                if(logic === 'lower_is_better') {
+                    isGood = diff <= 0; // If diff is negative (Actual < Target), it's good
+                } else if (logic === 'higher_is_better') {
+                    isGood = diff >= 0; // If diff is positive (Actual > Target), it's good
+                }
+
+                const sign = diff > 0 ? "+" : "";
+                // User logic: Diff ลบ ได้เป้าให้เป็นสีเขียว Diff บวก ให้เป็นสีแดง (สำหรับ Loss, MTTR)
+                // สำหรับ MTBF User บอก "Diffลบ ได้เป้าให้เป็นสีเขียว" ซึ่งอาจจะงงๆ เพราะ MTBF ยิ่งเยอะยิ่งดี 
+                // ผมจะใช้หลักการ: เขียว = บรรลุเป้าหมาย, แดง = ไม่บรรลุเป้าหมาย เพื่อให้ make sense ที่สุด
+                
+                let colorClass = isGood ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+                let icon = isGood ? '<i class="fa-solid fa-check mr-1"></i>' : '<i class="fa-solid fa-xmark mr-1"></i>';
+                
+                return `<span class="${colorClass} px-2 py-1 rounded text-xs">${icon} Diff: ${sign}${diff.toFixed(2)}</span>`;
+            };
+
+            // Update Cards
+            animateValue("kpiOpTime", totalOpTime, 0);
+            animateValue("kpiFreq", totalFreq, 0);
+            animateValue("kpiDowntime", totalDowntime, 0);
+            
+            document.getElementById("kpiPercentLoss").innerText = percentLoss.toFixed(2) + "%";
+            document.getElementById("diffPercentLoss").innerHTML = formatDiff(percentLoss, targetLoss, 'lower_is_better');
+
+            document.getElementById("kpiMTTR").innerText = mttr.toFixed(2);
+            document.getElementById("diffMTTR").innerHTML = formatDiff(mttr, targetMTTR, 'lower_is_better');
+
+            document.getElementById("kpiMTBF").innerText = mtbf.toFixed(2);
+            // MTBF: Higher actual is better. So if actual >= target, it's good.
+            document.getElementById("diffMTBF").innerHTML = formatDiff(mtbf, targetMTBF, 'higher_is_better');
+
+            // 6. Update Table
+            updateTable(filteredDaily);
+
+            // 7. Update Charts
+            updateCharts(filteredDaily);
+        }
+
+        // Animate numbers for nice effect
+        function animateValue(id, end, decimals=0) {
+            const obj = document.getElementById(id);
+            let start = parseFloat(obj.innerText.replace(/,/g, '')) || 0;
+            if (isNaN(start)) start = 0;
+            if (start === end) return;
+            
+            let duration = 500;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const current = start + progress * (end - start);
+                obj.innerHTML = current.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Render Table
+        function updateTable(data) {
+            const tbody = document.getElementById('tableBody');
+            document.getElementById('tableRecordCount').innerText = data.length.toLocaleString();
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>`;
+                return;
+            }
+
+            // Limit to 100 rows for performance on UI, sort by date descending
+            const displayData = [...data].sort((a,b) => parseThaiDate(b['วันที่']) - parseThaiDate(a['วันที่'])).slice(0, 100);
+
+            displayData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "bg-white border-b hover:bg-gray-50";
+                
+                // Combine Machine and Station
+                let machineStation = `${row['เครื่องจักร'] || '-'} <br><span class="text-xs text-gray-400">${row['Station'] || '-'}</span>`;
+                
+                // Combine Stop Freq and Time
+                let freqTime = `<span class="font-semibold text-orange-600">${row['จำนวนครั้งที่หยุด Actual'] || 0} ครั้ง</span><br><span class="text-red-500">${row['เวลาหยุดเครื่อง Actual'] || 0} นาที</span>`;
+                
+                // Combine Parts and Qty
+                let parts = row['รายการอะไหล่ที่เปลี่ยน'] ? row['รายการอะไหล่ที่เปลี่ยน'] : 'ไม่มีการเปลี่ยน';
+                let qty = row['จำนวน'] ? ` (${row['จำนวน']})` : '';
+                let partsQty = parts + qty;
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">${formatDateForDisplay(row['วันที่'])}</td>
+                    <td class="px-4 py-3">${machineStation}</td>
+                    <td class="px-4 py-3 text-red-600">${row['ปัญหา ความขัดข้องที่เกิด'] || '-'}</td>
+                    <td class="px-4 py-3">${row['สาเหตุที่ตรวจพบ'] || '-'}</td>
+                    <td class="px-4 py-3 text-green-700">${row['การแก้ไข และป้องกัน'] || '-'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${freqTime}</td>
+                    <td class="px-4 py-3">${partsQty}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Charts
+        function updateCharts(data) {
+            // Prepare Data for Downtime by Machine
+            const machineData = {};
+            // Prepare Data for Frequency by Station
+            const stationData = {};
+
+            data.forEach(row => {
+                const m = row['เครื่องจักร'] || 'ไม่ระบุ';
+                const s = row['Station'] || 'ไม่ระบุ';
+                const dTime = parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                const freq = parseFloat(row['จำนวนครั้งที่หยุด Actual']) || 0;
+
+                if(!machineData[m]) machineData[m] = 0;
+                machineData[m] += dTime;
+
+                if(!stationData[s]) stationData[s] = 0;
+                stationData[s] += freq;
+            });
+
+            // --- Chart 1: Doughnut (Downtime by Machine) ---
+            const ctxMachine = document.getElementById('machineDowntimeChart').getContext('2d');
+            const mLabels = Object.keys(machineData);
+            const mValues = Object.values(machineData);
+            
+            if(charts.machineChart) charts.machineChart.destroy();
+            charts.machineChart = new Chart(ctxMachine, {
+                type: 'doughnut',
+                data: {
+                    labels: mLabels,
+                    datasets: [{
+                        data: mValues,
+                        backgroundColor: ['#3b82f6', '#f97316', '#10b981', '#8b5cf6', '#ef4444', '#64748b'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+
+            // --- Chart 2: Bar (Top 5 Stations by Frequency) ---
+            // Sort station data
+            const sortedStations = Object.entries(stationData)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5); // Take top 5
+
+            const ctxStation = document.getElementById('stationFreqChart').getContext('2d');
+            
+            if(charts.stationChart) charts.stationChart.destroy();
+            charts.stationChart = new Chart(ctxStation, {
+                type: 'bar',
+                data: {
+                    labels: sortedStations.map(i => i[0].length > 15 ? i[0].substring(0,15)+'...' : i[0]),
+                    datasets: [{
+                        label: 'จำนวนครั้งที่หยุด (ครั้ง)',
+                        data: sortedStations.map(i => i[1]),
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Start App
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>ให้คุณเป็นผู้เชี่ยวชาญด้นการเขียนโค้ด html ออกแบบ Dash Board จากไฟล์
+
+
+
+ผมต้องการให้คุณ อ่านไฟล์ Google Sheet 
+
+รายงาน Maintenance Electric 
+
+-ชีท รายงาน ประจำวันจากลิ้งนี้ https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv
+
+-ชีท เวลาเดินงานจากลิ้งนี้ https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv
+
+อ่านให้ละเอียด
+
+
+
+และช่วยเขียนโค้ด เพื่อจะสร้าง Dash Board
+
+
+
+สิ่งที่ต้องการคือ
+
+
+
+-ให้สามารถเลือกวันที่ได้ 
+
+
+
+-ให้มีตัวกรอง 
+
+ช่วงวันที่เลือก จาก คอลัม A
+
+เครื่องจักร จาก คอลัม G
+
+Station จาก คอลัม H
+
+ประเภทงาน จาก คอลัม J
+
+สถานะ จาก คอลัม M
+
+
+
+โดยให้มีการ์ด 
+
+-เวลาเดินงาน ข้อมูลจากชีท เวลาเดินงาน โดยแยกเครื่องตามตัวกรอง วันที่ คอลัมA เครื่อง BHS คอลัมB,เครื่อง YUELI คอลัมC,เครื่อง ISOWA คอลัมD
+
+-จำนวนครั้ง ข้อมูลจากชีท รายงาน ประจำวัน คอลัมF
+
+-เวลาสูญเสีย ข้อมูลจากชีท รายงาน ประจำวัน คอลัมE
+
+-%เวลาสูญเสีย คำนวณใช้ข้อมูล การ์ดเวลาสูญเสีย หาร การ์ดเวลาเดินงาน และทำเป็นเปอร์เซนโดยการ์ดนี้ให้มี Target คือ 1.10% และมีค่า Diff ด้วย ถ้าDiffลบ ได้เป้าให้เป็นสีเขียว Diffบวก ให้เป็นสีแดง
+
+-ระยะเวลาซ่อมต่อครั้ง(MTTR) คำนวณใช้ข้อมูล การ์ดเวลาสูญเสีย หาร การ์ดจำนวนครั้ง โดยการ์ดนี้ให้มี Target คือ 15 นาที และมีค่า Diff ด้วย ถ้าDiffลบ ให้เป็นสีแดง Diffบวก ให้เป็นสีเขียว
+
+-ระยะห่างในการซ่อมอีกครั้ง(MTBF) คำนวณใช้ข้อมูล การ์ดเวลาเดินงาน ลบ การ์ดเวลาสูญเสีย และค่อยหารการ์ดจำนวนครั้ง โดยการ์ดนี้ให้มี Target คือ 1200 นาที และมีค่า Diff ด้วย ถ้าDiffลบ ได้เป้าให้เป็นสีเขียว Diffบวก ให้เป็นสีแดง
+
+
+
+-มีตารางรายละเอียดของคอลัม ในไฟล์
+
+วันที่ 
+
+เครื่องจักร,Station อยู่ด้วยกัน
+
+ปัญหา ความขัดข้องที่เกิด
+
+สาเหตุที่ตรวจพบ
+
+การแก้ไข และป้องกัน
+
+จำนวนครั้งที่หยุด,เวลาหยุดเครื่อง อยู่ด้วยกัน
+
+รายการอะไหล่ที่เปลี่ยน,จำนวน อยู่ด้วยกัน
+
+
+
+-ช่วยออกให้มีกราฟที่จำเป็นละสามารถวิเคราะห์ได้ง่าย
+
+
+
+จะเอาโค้ดไปวางใน Github เพื่อทำเป็นลิ้งเปิดในมือถือได้ และสามารถดูรายละเอียดได้ทั้งหมด 
