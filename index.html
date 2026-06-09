@@ -1284,12 +1284,21 @@
                 let qty = row['จำนวน']?.trim() || "";
                 let partsQty = "";
 
-                // กรองคำที่ไม่ใช่การระบุรายการอะไหล่ที่เป็นชิ้นงาน
-                const noPartsWords = ["ไม่เปลี่ยนอะไหล่", "ไม่มีการเปลี่ยน", "ไม่มี", "-", "ปกติ", "ไม่ได้เปลี่ยนอะไหล่", "null", "undefined", "0", "ไม่ต้องเปลี่ยน", "ไม่ต้องเปลี่ยนอะไหล่"];
-                const hasParts = parts && parts !== "" && !noPartsWords.some(word => parts.toLowerCase().includes(word) || word === parts.toLowerCase());
+                // แยกคำที่ต้องการกรองออกเป็น Exact Match และ Partial Match เพื่อป้องกันบั๊กเครื่องหมาย "-" หรือคำว่า "ปกติ" ในข้อความจริงโดนกรองทิ้ง
+                const partsLower = parts.toLowerCase().trim();
+                const exactNoParts = ["", "-", "ปกติ", "ไม่มี", "0", "null", "undefined"];
+                const partialNoParts = ["ไม่เปลี่ยนอะไหล่", "ไม่มีการเปลี่ยน", "ไม่ได้เปลี่ยนอะไหล่", "ไม่ต้องเปลี่ยน", "ไม่ต้องเปลี่ยนอะไหล่", "ไม่มีการเปลี่ยนอะไหล่"];
+
+                const isExactMatch = exactNoParts.includes(partsLower);
+                const isPartialMatch = partialNoParts.some(word => partsLower.includes(word));
+                const hasParts = parts !== "" && !isExactMatch && !isPartialMatch;
 
                 if (hasParts) {
-                    const hasQty = qty && qty !== "" && !noPartsWords.includes(qty.toLowerCase());
+                    const qtyLower = qty.toLowerCase().trim();
+                    const isQtyExactMatch = exactNoParts.includes(qtyLower);
+                    const isQtyPartialMatch = partialNoParts.some(word => qtyLower.includes(word));
+                    const hasQty = qty !== "" && !isQtyExactMatch && !isQtyPartialMatch;
+
                     let qtyDisplay = hasQty ? ` (${qty})` : "";
                     partsQty = parts + qtyDisplay;
                 }
