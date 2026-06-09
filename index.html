@@ -258,9 +258,9 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
                 <div>
                     <h3 class="text-lg font-bold text-slate-700 flex items-center">
-                        <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม % เวลาสูญเสีย & ประสิทธิภาพงาน
+                        <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม % เวลาสูญเสีย (Trend % Loss)
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">วิเคราะห์แนวโน้มเปรียบเทียบ % Loss, เวลาหยุดเครื่องรวม และจำนวนครั้งที่พัง</p>
+                    <p class="text-xs text-slate-400 mt-0.5">กราฟแสดงแนวโน้มสัดส่วนความสูญเสียเปรียบเทียบกับเป้าหมาย 1.10%</p>
                 </div>
                 <!-- Toggle Period Control -->
                 <div class="flex items-center space-x-1 mt-3 md:mt-0 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -664,7 +664,7 @@
             });
         }
 
-        // Trend Line/Bar Chart (Daily / Weekly / Monthly grouping)
+        // Trend Line Chart (Only displaying % เวลาสูญเสีย as a single line with Target)
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {};
             let temp = new Date(startDate);
@@ -736,18 +736,22 @@
             });
 
             const sortedKeys = Object.keys(groups).sort();
-            const labels = sortedKeys.map(k => groups[k].label);
+            
+            // X-Axis Labels: Sequentially map "Week 1", "Week 2"... if interval is "week"
+            const labels = sortedKeys.map((k, idx) => {
+                if (currentTrendInterval === 'week') {
+                    return `Week ${idx + 1}`;
+                }
+                return groups[k].label;
+            });
+
             const percentLosses = [];
-            const downtimes = [];
-            const freqs = [];
             const targets = [];
 
             sortedKeys.forEach(k => {
                 const g = groups[k];
                 const pct = g.opTime > 0 ? (g.downtime / g.opTime) * 100 : 0;
                 percentLosses.push(parseFloat(pct.toFixed(2)));
-                downtimes.push(g.downtime);
-                freqs.push(g.freq);
                 targets.push(1.10);
             });
 
@@ -755,57 +759,33 @@
             if (charts.trendChart) charts.trendChart.destroy();
 
             charts.trendChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
                         {
                             label: '% เวลาสูญเสีย (% Loss)',
                             data: percentLosses,
-                            type: 'line',
-                            borderColor: '#2563eb', // Indigo Blue
-                            backgroundColor: '#2563eb',
+                            borderColor: '#2563eb', // Clean Indigo Blue
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
                             borderWidth: 3,
-                            yAxisID: 'y-loss',
-                            zIndex: 3,
-                            tension: 0.1,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
+                            tension: 0.15,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            fill: true,
+                            yAxisID: 'y'
                         },
                         {
                             label: 'เป้าหมาย Target (1.10%)',
                             data: targets,
-                            type: 'line',
                             borderColor: '#ef4444', // Red dashed
                             borderDash: [6, 6],
                             borderWidth: 2,
                             fill: false,
                             pointStyle: 'none',
                             pointRadius: 0,
-                            yAxisID: 'y-loss',
-                            zIndex: 2
-                        },
-                        {
-                            label: 'เวลาสูญเสีย (นาที)',
-                            data: downtimes,
-                            backgroundColor: 'rgba(249, 115, 22, 0.25)', // Orange Bar
-                            borderColor: 'rgba(249, 115, 22, 0.7)',
-                            borderWidth: 1,
-                            yAxisID: 'y-downtime',
-                            zIndex: 1,
-                            barPercentage: 0.5
-                        },
-                        {
-                            label: 'จำนวนครั้งที่พัง (ครั้ง)',
-                            data: freqs,
-                            type: 'line',
-                            borderColor: '#10b981', // Green Line
-                            backgroundColor: '#10b981',
-                            borderWidth: 2,
-                            yAxisID: 'y-downtime',
-                            zIndex: 2,
-                            tension: 0.1,
-                            pointRadius: 3
+                            pointHoverRadius: 0,
+                            yAxisID: 'y'
                         }
                     ]
                 },
@@ -813,29 +793,17 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        'y-loss': {
+                        y: {
                             type: 'linear',
                             position: 'left',
                             title: {
                                 display: true,
                                 text: 'สัดส่วนความสูญเสีย (%)',
-                                font: { family: 'Prompt', weight: 'bold' }
+                                font: { family: 'Prompt', weight: 'bold', size: 12 }
                             },
                             ticks: {
-                                callback: value => value + '%'
-                            },
-                            min: 0
-                        },
-                        'y-downtime': {
-                            type: 'linear',
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: 'เวลาหยุด (นาที) / สถิติพัง (ครั้ง)',
-                                font: { family: 'Prompt', weight: 'bold' }
-                            },
-                            grid: {
-                                drawOnChartArea: false
+                                callback: value => value.toFixed(2) + '%',
+                                font: { family: 'Prompt' }
                             },
                             min: 0
                         },
@@ -850,8 +818,37 @@
                             labels: { font: { family: 'Prompt' } }
                         },
                         tooltip: {
-                            bodyFont: { family: 'Prompt' },
-                            titleFont: { family: 'Prompt' }
+                            titleFont: { family: 'Prompt', size: 14, weight: 'bold' },
+                            bodyFont: { family: 'Prompt', size: 13 },
+                            callbacks: {
+                                // Customized title to show actual date range on Week hovering
+                                title: function(tooltipItems) {
+                                    const index = tooltipItems[0].dataIndex;
+                                    const key = sortedKeys[index];
+                                    const group = groups[key];
+                                    if (currentTrendInterval === 'week') {
+                                        return `Week ${index + 1} (${group.label})`;
+                                    }
+                                    return group.label;
+                                },
+                                // Show all three metrics in a single line's tooltip
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const key = sortedKeys[index];
+                                    const group = groups[key];
+                                    const pctVal = context.parsed.y;
+                                    
+                                    if (context.datasetIndex === 0) { // % Loss line
+                                        return [
+                                            `• % เวลาสูญเสีย: ${pctVal.toFixed(2)}%`,
+                                            `• เวลาสูญเสียสะสม: ${group.downtime.toLocaleString()} นาที`,
+                                            `• จำนวนครั้งที่เครื่องหยุด: ${group.freq.toLocaleString()} ครั้ง`
+                                        ];
+                                    } else { // Target line
+                                        return `🎯 เป้าหมาย Target: ${pctVal.toFixed(2)}%`;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
