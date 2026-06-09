@@ -289,7 +289,7 @@
                 <h3 class="text-lg font-semibold text-slate-700 mb-4 flex items-center">
                     <i class="fa-solid fa-chart-pie mr-2 text-indigo-500"></i> สัดส่วนเวลาสูญเสียตามเครื่องจักร
                 </h3>
-                <div class="relative h-72 w-full">
+                <div class="relative h-72 w-full flex items-center justify-center">
                     <canvas id="machineDowntimeChart"></canvas>
                 </div>
             </div>
@@ -297,7 +297,7 @@
             <!-- Horizontal Grouped Bar Chart for Top 5 Stations -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <h3 class="text-lg font-semibold text-slate-700 mb-4 flex items-center">
-                    <i class="fa-solid fa-chart-simple mr-2 text-amber-500"></i> Top 5 Station ที่หยุดบ่อยที่สุด
+                    <i class="fa-solid fa-chart-simple mr-2 text-amber-500"></i> Top 5 Station ที่เสียเวลามากที่สุด (เวลาสูญเสีย)
                 </h3>
                 <div class="relative h-72 w-full">
                     <canvas id="stationFreqChart"></canvas>
@@ -622,7 +622,7 @@
                 return `<span class="${colorClass} px-2 py-1 rounded text-xs font-semibold">${icon} Diff: ${sign}${diff.toFixed(2)}</span>`;
             };
 
-            // Animates and prints KPIs
+            // Animates and prints KPIs (MTTR & MTBF rounded to nearest integers)
             animateValue("kpiOpTime", totalOpTime, 0);
             animateValue("kpiFreq", totalFreq, 0);
             animateValue("kpiDowntime", totalDowntime, 0);
@@ -630,11 +630,12 @@
             document.getElementById("kpiPercentLoss").innerText = percentLoss.toFixed(2) + "%";
             document.getElementById("diffPercentLoss").innerHTML = formatDiff(percentLoss, targetLoss, 'lower_is_better');
 
-            document.getElementById("kpiMTTR").innerText = mttr.toFixed(2);
-            document.getElementById("diffMTTR").innerHTML = formatDiff(mttr, targetMTTR, 'lower_is_better');
+            // Rounded to integers as per user request
+            animateValue("kpiMTTR", Math.round(mttr), 0);
+            document.getElementById("diffMTTR").innerHTML = formatDiff(Math.round(mttr), targetMTTR, 'lower_is_better');
 
-            document.getElementById("kpiMTBF").innerText = mtbf.toFixed(2);
-            document.getElementById("diffMTBF").innerHTML = formatDiff(mtbf, targetMTBF, 'higher_is_better');
+            animateValue("kpiMTBF", Math.round(mtbf), 0);
+            document.getElementById("diffMTBF").innerHTML = formatDiff(Math.round(mtbf), targetMTBF, 'higher_is_better');
 
             // Render Table, Job Type Cards, and Charts
             updateJobTypeSummary(filteredDaily);
@@ -644,7 +645,7 @@
             renderTrendChart(startDate, endDate, fMachine, filteredDaily);
         }
 
-        // Job Type Summary Builder
+        // Job Type Summary Builder (Shows time specifically for Downtime type only)
         function updateJobTypeSummary(data) {
             const summaryGrid = document.getElementById('jobTypeSummaryGrid');
             summaryGrid.innerHTML = '';
@@ -677,6 +678,10 @@
                 const theme = colors[type] || defaultColor;
                 const card = document.createElement('div');
                 card.className = `flex items-center p-3.5 rounded-xl border ${theme.bg} transition-all duration-200 hover:shadow-sm`;
+                
+                // Only show downtime minutes for the 'Downtime' type as requested
+                const downtimeText = type === 'Downtime' ? `<span class="text-[10px] opacity-75">(${info.downtime} น.)</span>` : '';
+
                 card.innerHTML = `
                     <div class="p-2.5 rounded-lg bg-white/90 mr-3 shadow-2xs">
                         <i class="${theme.icon} text-lg"></i>
@@ -685,7 +690,7 @@
                         <p class="text-xs font-semibold text-slate-500 truncate" title="${type}">${type}</p>
                         <div class="flex items-baseline space-x-1.5 mt-0.5">
                             <span class="text-lg font-bold">${info.count} <span class="text-xs font-normal">งาน</span></span>
-                            <span class="text-[10px] opacity-75">(${info.downtime} น.)</span>
+                            ${downtimeText}
                         </div>
                     </div>
                 `;
@@ -693,7 +698,7 @@
             });
         }
 
-        // Trend Line Chart with calendar week, smooth lines, and on-chart data labels
+        // Trend Line Chart with calendar week, smooth lines, and on-chart conditional colored data labels
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {};
             let temp = new Date(startDate);
@@ -749,7 +754,6 @@
                     details = gLabel;
                 } else if (currentTrendInterval === 'week') {
                     const wkInfo = getWeekNumberSundayStart(day.dateObj);
-                    // Standard calendar week output (e.g. 2026-W24)
                     gKey = `${wkInfo.year}-W${String(wkInfo.week).padStart(2, '0')}`;
                     gLabel = `Week ${wkInfo.week}`;
                     
@@ -794,25 +798,35 @@
                         {
                             label: '% เวลาสูญเสีย (% Loss)',
                             data: percentLosses,
-                            borderColor: '#2563eb', // Beautiful Royal Indigo
+                            borderColor: '#2563eb', 
                             backgroundColor: 'rgba(37, 99, 235, 0.08)',
                             borderWidth: 3.5,
-                            tension: 0.4, // Beautiful Smooth bezier curves
+                            tension: 0.4, // Beautiful Smooth curves
                             pointRadius: 6,
                             pointBackgroundColor: '#2563eb',
                             pointHoverRadius: 9,
                             fill: true,
                             yAxisID: 'y',
                             datalabels: {
-                                display: true, // Show explicitly on dataset points
+                                display: true, 
                                 align: 'top',
                                 anchor: 'end',
                                 offset: 8,
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                borderColor: '#2563eb',
+                                // Conditional styling for box background based on meeting targets
+                                backgroundColor: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return value <= 1.10 ? 'rgba(209, 250, 229, 0.95)' : 'rgba(254, 226, 226, 0.95)'; // Green / Red soft transparent
+                                },
+                                borderColor: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return value <= 1.10 ? '#10b981' : '#ef4444'; // Green / Red solid borders
+                                },
                                 borderWidth: 1.5,
                                 borderRadius: 6,
-                                color: '#1e3a8a',
+                                color: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
+                                    return value <= 1.10 ? '#065f46' : '#991b1b'; // Dark Green / Dark Red texts
+                                },
                                 font: {
                                     family: 'Prompt',
                                     size: 9,
@@ -823,8 +837,7 @@
                                     const key = sortedKeys[index];
                                     if (!key) return '';
                                     const group = groups[key];
-                                    // โชว์ค่าให้เห็นบนกราฟทันที
-                                    return `${value.toFixed(2)}%\n(${group.downtime.toLocaleString()} นาที / ${group.freq} ครั้ง)`;
+                                    return `${value.toFixed(2)}%\n(${group.downtime.toLocaleString()} น. / ${group.freq} ครั้ง)`;
                                 },
                                 textAlign: 'center',
                                 padding: 6
@@ -833,7 +846,7 @@
                         {
                             label: 'เป้าหมาย Target (1.10%)',
                             data: targets,
-                            borderColor: '#ef4444', // Elegant red dashed target line
+                            borderColor: '#ef4444', 
                             borderDash: [6, 6],
                             borderWidth: 2,
                             fill: false,
@@ -842,7 +855,7 @@
                             pointHoverRadius: 0,
                             yAxisID: 'y',
                             datalabels: {
-                                display: false // Do not display labels on target line
+                                display: false 
                             }
                         }
                     ]
@@ -852,7 +865,7 @@
                     maintainAspectRatio: false,
                     layout: {
                         padding: {
-                            top: 35, // Prevent labels from being clipped at the top of the chart canvas
+                            top: 35, 
                             right: 15,
                             left: 10,
                             bottom: 5
@@ -871,7 +884,7 @@
                                 callback: value => value.toFixed(2) + '%',
                                 font: { family: 'Prompt' }
                             },
-                            grace: '20%', // Grace padding auto-prevents datalabel ceiling clipping
+                            grace: '20%', 
                             min: 0
                         },
                         x: {
@@ -916,7 +929,7 @@
             });
         }
 
-        // Doughnut Chart Setup
+        // Doughnut Chart Setup (Now displays percentage % and beautiful design)
         function updateDoughnutChart(data) {
             const machineData = {};
             data.forEach(row => {
@@ -925,6 +938,8 @@
                 if(!machineData[m]) machineData[m] = 0;
                 machineData[m] += dTime;
             });
+
+            const total = Object.values(machineData).reduce((sum, val) => sum + val, 0);
 
             const ctx = document.getElementById('machineDowntimeChart').getContext('2d');
             if(charts.machineChart) charts.machineChart.destroy();
@@ -937,7 +952,7 @@
                         data: Object.values(machineData),
                         backgroundColor: ['#2563eb', '#f97316', '#10b981', '#8b5cf6', '#f43f5e', '#64748b'],
                         borderWidth: 2,
-                        hoverOffset: 4
+                        hoverOffset: 6
                     }]
                 },
                 options: {
@@ -949,14 +964,28 @@
                             labels: { font: { family: 'Prompt' } }
                         },
                         datalabels: {
-                            display: false // Disable datalabels on Doughnut for aesthetic purposes
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                family: 'Prompt',
+                                weight: 'bold',
+                                size: 11
+                            },
+                            // Text Stroke effect for clear legibility on multi-colored background slices
+                            textStrokeColor: 'rgba(0,0,0,0.6)',
+                            textStrokeWidth: 2,
+                            formatter: function(value) {
+                                if (total === 0) return '';
+                                const pct = (value / total) * 100;
+                                return pct > 4 ? `${pct.toFixed(1)}%` : ''; // Only display on >4% slices to avoid overlapping
+                            }
                         }
                     }
                 }
             });
         }
 
-        // Horizontal Grouped Bar Chart Setup (Top 5 Stations)
+        // Horizontal Single-Bar Chart Setup (Top 5 Stations with distinct colors and detailed annotations)
         function updateHorizontalBarChart(data) {
             const stationData = {};
             data.forEach(row => {
@@ -971,13 +1000,17 @@
                 stationData[s].freq += freq;
             });
 
+            // Sort Stations dynamically based on Downtime
             const sorted = Object.entries(stationData)
-                .sort((a,b) => b[1].freq - a[1].freq) // Sort by breakdowns
+                .sort((a,b) => b[1].downtime - a[1].downtime) 
                 .slice(0, 5);
 
             const labels = sorted.map(item => item[0]);
             const freqValues = sorted.map(item => item[1].freq);
             const downtimeValues = sorted.map(item => item[1].downtime);
+
+            // Modern diverse distinct coloring list
+            const barColors = ['#ef4444', '#f97316', '#2563eb', '#10b981', '#8b5cf6'];
 
             const ctx = document.getElementById('stationFreqChart').getContext('2d');
             if(charts.stationChart) charts.stationChart.destroy();
@@ -988,58 +1021,66 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: 'จำนวนครั้งที่หยุด (ครั้ง)',
-                            data: freqValues,
-                            backgroundColor: '#f59e0b', // Amber
-                            xAxisID: 'x-freq',
-                            barThickness: 12
-                        },
-                        {
                             label: 'เวลาสูญเสีย (นาที)',
                             data: downtimeValues,
-                            backgroundColor: '#ef4444', // Red
-                            xAxisID: 'x-downtime',
-                            barThickness: 12
+                            backgroundColor: barColors.slice(0, downtimeValues.length), 
+                            borderRadius: 6,
+                            barThickness: 24,
+                            datalabels: {
+                                display: true,
+                                anchor: 'end',
+                                align: 'right',
+                                color: '#1e293b',
+                                font: {
+                                    family: 'Prompt',
+                                    weight: 'bold',
+                                    size: 10
+                                },
+                                formatter: function(value, context) {
+                                    const index = context.dataIndex;
+                                    const freq = freqValues[index];
+                                    return `${value.toLocaleString()} น. / ${freq} ครั้ง`;
+                                }
+                            }
                         }
                     ]
                 },
                 options: {
-                    indexAxis: 'y', // Makes chart horizontal
+                    indexAxis: 'y', // Convert to Horizontal Bar
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            right: 90 // Generous right padding to make sure annotations are completely visible
+                        }
+                    },
                     scales: {
                         y: {
                             ticks: { font: { family: 'Prompt' } }
                         },
-                        'x-freq': {
+                        x: {
                             type: 'linear',
-                            position: 'top',
                             title: {
                                 display: true,
-                                text: 'จำนวนครั้งที่หยุด (ครั้ง)',
+                                text: 'เวลาสูญเสียทั้งหมด (นาที)',
                                 font: { family: 'Prompt', weight: 'bold' }
                             },
-                            ticks: { precision: 0 }
-                        },
-                        'x-downtime': {
-                            type: 'linear',
-                            position: 'bottom',
-                            title: {
-                                display: true,
-                                text: 'เวลาสูญเสีย (นาที)',
-                                font: { family: 'Prompt', weight: 'bold' }
-                            },
-                            grid: {
-                                drawOnChartArea: false
-                            }
+                            ticks: { font: { family: 'Prompt' } }
                         }
                     },
                     plugins: {
                         legend: {
-                            labels: { font: { family: 'Prompt' } }
+                            display: false // Hide legend to maximize screen width on single bar datasets
                         },
-                        datalabels: {
-                            display: false // Disable on Horizontal bar chart for clean view
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const downtime = context.parsed.x;
+                                    const freq = freqValues[index];
+                                    return ` เวลาสูญเสีย: ${downtime} นาที | เครื่องหยุด: ${freq} ครั้ง`;
+                                }
+                            }
                         }
                     }
                 }
