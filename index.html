@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js Datalabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <!-- PapaParse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- Google Fonts -->
@@ -260,7 +262,7 @@
                     <h3 class="text-lg font-bold text-slate-700 flex items-center">
                         <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม % เวลาสูญเสีย (Trend % Loss)
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">กราฟแสดงแนวโน้มสัดส่วนความสูญเสียเปรียบเทียบกับเป้าหมาย 1.10%</p>
+                    <p class="text-xs text-slate-400 mt-0.5">กราฟแสดงแนวโน้มสัดส่วนความสูญเสียเปรียบเทียบกับเป้าหมาย 1.10% และค่าประสิทธิภาพจริง</p>
                 </div>
                 <!-- Toggle Period Control -->
                 <div class="flex items-center space-x-1 mt-3 md:mt-0 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -275,7 +277,7 @@
                     </button>
                 </div>
             </div>
-            <div class="relative h-96 w-full">
+            <div class="relative h-[480px] w-full">
                 <canvas id="trendPerformanceChart"></canvas>
             </div>
         </section>
@@ -337,6 +339,9 @@
 
     <!-- JavaScript Logic -->
     <script>
+        // Register Chart.js DataLabels Plugin globally
+        Chart.register(ChartDataLabels);
+
         // Google Sheets URLs
         const URL_SHEET_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
         const URL_SHEET_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
@@ -395,6 +400,30 @@
             const day = d.getDay(); // 0: Sunday, 1: Monday, etc.
             const diff = d.getDate() - day;
             return new Date(d.setDate(diff));
+        }
+
+        // Calculate Calendar Week Number starting Sunday
+        function getWeekNumberSundayStart(date) {
+            const d = new Date(date.getTime());
+            d.setHours(0,0,0,0);
+            
+            // Find the Sunday of the current week
+            const day = d.getDay();
+            const sunday = new Date(d.getTime() - day * 24 * 60 * 60 * 1000);
+            
+            // Find Jan 1 of the Sunday's year
+            const year = sunday.getFullYear();
+            const jan1 = new Date(year, 0, 1);
+            
+            // Find first Sunday of the year (which starts Week 1)
+            const jan1Day = jan1.getDay();
+            const firstSunday = new Date(jan1.getTime() - jan1Day * 24 * 60 * 60 * 1000);
+            
+            // Calculate weeks
+            const diffMs = sunday.getTime() - firstSunday.getTime();
+            const weekNo = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+            
+            return { week: weekNo, year: year, startOfWeek: sunday };
         }
 
         // PapaParse dynamic downloader
@@ -664,7 +693,7 @@
             });
         }
 
-        // Trend Line Chart (Only displaying % เวลาสูญเสีย as a single line with Target)
+        // Trend Line Chart with calendar week, smooth lines, and on-chart data labels
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {};
             let temp = new Date(startDate);
@@ -712,22 +741,29 @@
             Object.values(dateMap).forEach(day => {
                 let gKey = "";
                 let gLabel = "";
+                let details = "";
 
                 if (currentTrendInterval === 'day') {
                     gKey = formatDateForInput(day.dateObj);
                     gLabel = formatDateForDisplay(gKey.split('-').reverse().join('/'));
+                    details = gLabel;
                 } else if (currentTrendInterval === 'week') {
-                    const start = getStartOfWeek(day.dateObj);
-                    gKey = formatDateForInput(start);
-                    gLabel = `W/C ${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')}`;
+                    const wkInfo = getWeekNumberSundayStart(day.dateObj);
+                    // Standard calendar week output (e.g. 2026-W24)
+                    gKey = `${wkInfo.year}-W${String(wkInfo.week).padStart(2, '0')}`;
+                    gLabel = `Week ${wkInfo.week}`;
+                    
+                    const weekEndDate = new Date(wkInfo.startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    details = `สัปดาห์ที่ ${wkInfo.week} ของปี ${wkInfo.year + 543} (${formatDateForDisplay(formatDateForInput(wkInfo.startOfWeek))} - ${formatDateForDisplay(formatDateForInput(weekEndDate))})`;
                 } else if (currentTrendInterval === 'month') {
                     gKey = `${day.dateObj.getFullYear()}-${String(day.dateObj.getMonth() + 1).padStart(2, '0')}`;
                     const thMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
                     gLabel = `${thMonths[day.dateObj.getMonth()]} ${day.dateObj.getFullYear() + 543}`;
+                    details = `เดือน${thMonths[day.dateObj.getMonth()]} พ.ศ. ${day.dateObj.getFullYear() + 543}`;
                 }
 
                 if (!groups[gKey]) {
-                    groups[gKey] = { label: gLabel, downtime: 0, freq: 0, opTime: 0 };
+                    groups[gKey] = { label: gLabel, details: details, downtime: 0, freq: 0, opTime: 0 };
                 }
 
                 groups[gKey].downtime += day.downtime;
@@ -736,15 +772,7 @@
             });
 
             const sortedKeys = Object.keys(groups).sort();
-            
-            // X-Axis Labels: Sequentially map "Week 1", "Week 2"... if interval is "week"
-            const labels = sortedKeys.map((k, idx) => {
-                if (currentTrendInterval === 'week') {
-                    return `Week ${idx + 1}`;
-                }
-                return groups[k].label;
-            });
-
+            const labels = sortedKeys.map(k => groups[k].label);
             const percentLosses = [];
             const targets = [];
 
@@ -766,32 +794,70 @@
                         {
                             label: '% เวลาสูญเสีย (% Loss)',
                             data: percentLosses,
-                            borderColor: '#2563eb', // Clean Indigo Blue
-                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.15,
-                            pointRadius: 5,
-                            pointHoverRadius: 8,
+                            borderColor: '#2563eb', // Beautiful Royal Indigo
+                            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                            borderWidth: 3.5,
+                            tension: 0.4, // Beautiful Smooth bezier curves
+                            pointRadius: 6,
+                            pointBackgroundColor: '#2563eb',
+                            pointHoverRadius: 9,
                             fill: true,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: true, // Show explicitly on dataset points
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 8,
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#2563eb',
+                                borderWidth: 1.5,
+                                borderRadius: 6,
+                                color: '#1e3a8a',
+                                font: {
+                                    family: 'Prompt',
+                                    size: 9,
+                                    weight: 'bold'
+                                },
+                                formatter: function(value, context) {
+                                    const index = context.dataIndex;
+                                    const key = sortedKeys[index];
+                                    if (!key) return '';
+                                    const group = groups[key];
+                                    // โชว์ค่าให้เห็นบนกราฟทันที
+                                    return `${value.toFixed(2)}%\n(${group.downtime.toLocaleString()} นาที / ${group.freq} ครั้ง)`;
+                                },
+                                textAlign: 'center',
+                                padding: 6
+                            }
                         },
                         {
                             label: 'เป้าหมาย Target (1.10%)',
                             data: targets,
-                            borderColor: '#ef4444', // Red dashed
+                            borderColor: '#ef4444', // Elegant red dashed target line
                             borderDash: [6, 6],
                             borderWidth: 2,
                             fill: false,
                             pointStyle: 'none',
                             pointRadius: 0,
                             pointHoverRadius: 0,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            datalabels: {
+                                display: false // Do not display labels on target line
+                            }
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 35, // Prevent labels from being clipped at the top of the chart canvas
+                            right: 15,
+                            left: 10,
+                            bottom: 5
+                        }
+                    },
                     scales: {
                         y: {
                             type: 'linear',
@@ -805,11 +871,12 @@
                                 callback: value => value.toFixed(2) + '%',
                                 font: { family: 'Prompt' }
                             },
+                            grace: '20%', // Grace padding auto-prevents datalabel ceiling clipping
                             min: 0
                         },
                         x: {
                             ticks: {
-                                font: { family: 'Prompt' }
+                                font: { family: 'Prompt', size: 11 }
                             }
                         }
                     },
@@ -821,30 +888,24 @@
                             titleFont: { family: 'Prompt', size: 14, weight: 'bold' },
                             bodyFont: { family: 'Prompt', size: 13 },
                             callbacks: {
-                                // Customized title to show actual date range on Week hovering
                                 title: function(tooltipItems) {
                                     const index = tooltipItems[0].dataIndex;
                                     const key = sortedKeys[index];
-                                    const group = groups[key];
-                                    if (currentTrendInterval === 'week') {
-                                        return `Week ${index + 1} (${group.label})`;
-                                    }
-                                    return group.label;
+                                    return groups[key].details;
                                 },
-                                // Show all three metrics in a single line's tooltip
                                 label: function(context) {
                                     const index = context.dataIndex;
                                     const key = sortedKeys[index];
                                     const group = groups[key];
                                     const pctVal = context.parsed.y;
                                     
-                                    if (context.datasetIndex === 0) { // % Loss line
+                                    if (context.datasetIndex === 0) {
                                         return [
                                             `• % เวลาสูญเสีย: ${pctVal.toFixed(2)}%`,
                                             `• เวลาสูญเสียสะสม: ${group.downtime.toLocaleString()} นาที`,
                                             `• จำนวนครั้งที่เครื่องหยุด: ${group.freq.toLocaleString()} ครั้ง`
                                         ];
-                                    } else { // Target line
+                                    } else {
                                         return `🎯 เป้าหมาย Target: ${pctVal.toFixed(2)}%`;
                                     }
                                 }
@@ -886,6 +947,9 @@
                         legend: {
                             position: 'right',
                             labels: { font: { family: 'Prompt' } }
+                        },
+                        datalabels: {
+                            display: false // Disable datalabels on Doughnut for aesthetic purposes
                         }
                     }
                 }
@@ -973,6 +1037,9 @@
                     plugins: {
                         legend: {
                             labels: { font: { family: 'Prompt' } }
+                        },
+                        datalabels: {
+                            display: false // Disable on Horizontal bar chart for clean view
                         }
                     }
                 }
