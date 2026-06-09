@@ -63,7 +63,7 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
-            0% { transform: rotate(0deg); }
+            0 { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
     </style>
@@ -250,31 +250,47 @@
             <h3 class="text-lg font-semibold text-slate-700 mb-4 flex items-center">
                 <i class="fa-solid fa-list-check text-blue-600 mr-2"></i> 📊 สรุปสถิติแยกตามประเภทงาน (Job Type Summary)
             </h3>
-            <div id="jobTypeSummaryGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div id="jobTypeSummaryGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <!-- Dynamically generated job type cards will go here -->
             </div>
         </section>
 
         <!-- Trend Performance Section (Full Width) -->
         <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b pb-4 gap-4">
                 <div>
-                    <h3 class="text-lg font-bold text-slate-700 flex items-center">
-                        <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม % เวลาสูญเสีย (Trend % Loss)
+                    <h3 id="trendTitleText" class="text-lg font-bold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม % เวลาสูญเสีย (Trend % Loss) - ทุกเครื่องจักร
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">กราฟแสดงแนวโน้มสัดส่วนความสูญเสียเปรียบเทียบกับเป้าหมาย 1.10% และค่าประสิทธิภาพจริง</p>
+                    <p class="text-xs text-slate-400 mt-0.5">กราฟแสดงแนวโน้มความสูญเสียและประสิทธิภาพการทำงาน พร้อมเปรียบเทียบค่าเกณฑ์มาตรฐานโรงงาน</p>
                 </div>
-                <!-- Toggle Period Control -->
-                <div class="flex items-center space-x-1 mt-3 md:mt-0 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                    <button id="btnTrendDay" class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('day')">
-                        รายวัน (Day)
-                    </button>
-                    <button id="btnTrendWeek" class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('week')">
-                        รายสัปดาห์ (Week)
-                    </button>
-                    <button id="btnTrendMonth" class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('month')">
-                        รายเดือน (Month)
-                    </button>
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Metric Selector Toggle -->
+                    <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button id="btnMetricLoss" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all bg-blue-600 text-white shadow-sm" onclick="changeTrendMetric('loss')">
+                            % Loss
+                        </button>
+                        <button id="btnMetricMTTR" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" onclick="changeTrendMetric('mttr')">
+                            MTTR
+                        </button>
+                        <button id="btnMetricMTBF" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" onclick="changeTrendMetric('mtbf')">
+                            MTBF
+                        </button>
+                    </div>
+
+                    <!-- Toggle Period Control -->
+                    <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button id="btnTrendDay" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('day')">
+                            รายวัน (Day)
+                        </button>
+                        <button id="btnTrendWeek" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('week')">
+                            รายสัปดาห์ (Week)
+                        </button>
+                        <button id="btnTrendMonth" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all" onclick="changeTrendInterval('month')">
+                            รายเดือน (Month)
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="relative h-[480px] w-full">
@@ -351,6 +367,7 @@
         let opTimeData = [];
         let charts = {};
         let currentTrendInterval = 'day'; // 'day', 'week', 'month'
+        let currentTrendMetric = 'loss'; // 'loss', 'mttr', 'mtbf'
 
         // Pure Local Date Parser (Fixes timezone issues completely)
         function parseThaiDate(dateStr) {
@@ -524,6 +541,23 @@
             });
         }
 
+        // Switch Trend Graph Metric
+        function changeTrendMetric(metric) {
+            currentTrendMetric = metric;
+            const metrics = ['loss', 'mttr', 'mtbf'];
+            metrics.forEach(m => {
+                const btn = document.getElementById('btnMetric' + m.charAt(0).toUpperCase() + m.slice(1));
+                if (m === metric) {
+                    btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                    btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                    btn.classList.add('text-slate-600', 'hover:text-slate-900');
+                }
+            });
+            updateDashboard();
+        }
+
         // Switch Grouping Intervals for Trend Chart
         function changeTrendInterval(interval) {
             currentTrendInterval = interval;
@@ -637,6 +671,17 @@
             animateValue("kpiMTBF", Math.round(mtbf), 0);
             document.getElementById("diffMTBF").innerHTML = formatDiff(Math.round(mtbf), targetMTBF, 'higher_is_better');
 
+            // Set Trend Header Text dynamically based on active filter
+            const activeMachineName = fMachine === 'ALL' ? 'ทุกเครื่องจักร' : fMachine;
+            let metricLabelText = "";
+            if (currentTrendMetric === 'loss') metricLabelText = "% เวลาสูญเสีย (Trend % Loss)";
+            else if (currentTrendMetric === 'mttr') metricLabelText = "ระยะเวลาซ่อมเฉลี่ย (Trend MTTR)";
+            else if (currentTrendMetric === 'mtbf') metricLabelText = "ระยะห่างเฉลี่ยการเสีย (Trend MTBF)";
+
+            document.getElementById("trendTitleText").innerHTML = `
+                <i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> แนวโน้ม ${metricLabelText} - ${activeMachineName}
+            `;
+
             // Render Table, Job Type Cards, and Charts
             updateJobTypeSummary(filteredDaily);
             updateTable(filteredDaily);
@@ -645,12 +690,15 @@
             renderTrendChart(startDate, endDate, fMachine, filteredDaily);
         }
 
-        // Job Type Summary Builder (Shows time specifically for Downtime type only)
+        // Job Type Summary Builder with Total Jobs count included
         function updateJobTypeSummary(data) {
             const summaryGrid = document.getElementById('jobTypeSummaryGrid');
             summaryGrid.innerHTML = '';
 
             const jobTypes = {};
+            let totalJobsCount = 0;
+            let totalDowntimeAll = 0;
+
             data.forEach(row => {
                 const jt = row['ประเภทงาน']?.trim() || 'ไม่ระบุ';
                 if (!jobTypes[jt]) {
@@ -658,7 +706,27 @@
                 }
                 jobTypes[jt].count += 1;
                 jobTypes[jt].downtime += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                
+                totalJobsCount += 1;
+                totalDowntimeAll += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
             });
+
+            // Card 1: Total Jobs Card (Always at the beginning, premium indigo styling)
+            const totalCard = document.createElement('div');
+            totalCard.className = `flex items-center p-3.5 rounded-xl border bg-slate-800 text-white border-slate-700 transition-all duration-200 hover:shadow-sm`;
+            totalCard.innerHTML = `
+                <div class="p-2.5 rounded-lg bg-slate-700 mr-3 shadow-2xs text-amber-400">
+                    <i class="fa-solid fa-layer-group text-lg"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-semibold text-slate-300 truncate">งานทั้งหมด (Total)</p>
+                    <div class="flex items-baseline space-x-1.5 mt-0.5">
+                        <span class="text-lg font-bold">${totalJobsCount} <span class="text-xs font-normal">งาน</span></span>
+                        <span class="text-[10px] text-slate-400">(${totalDowntimeAll} น.)</span>
+                    </div>
+                </div>
+            `;
+            summaryGrid.appendChild(totalCard);
 
             const colors = {
                 'Downtime': { bg: 'bg-rose-50 text-rose-700 border-rose-100', icon: 'fa-solid fa-circle-stop' },
@@ -668,11 +736,6 @@
                 'PM Plan': { bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: 'fa-solid fa-calendar-days' }
             };
             const defaultColor = { bg: 'bg-slate-50 text-slate-700 border-slate-100', icon: 'fa-solid fa-tag' };
-
-            if (Object.keys(jobTypes).length === 0) {
-                summaryGrid.innerHTML = `<p class="col-span-full text-center text-sm text-slate-400 py-4">ไม่มีข้อมูลประเภทงานเพื่อสรุปผล</p>`;
-                return;
-            }
 
             Object.entries(jobTypes).forEach(([type, info]) => {
                 const theme = colors[type] || defaultColor;
@@ -698,7 +761,7 @@
             });
         }
 
-        // Trend Line Chart with calendar week, smooth lines, and on-chart conditional colored data labels
+        // Interactive Trend Line Chart with calendar week, smooth lines, custom colors, targets, and colored datalabels
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {};
             let temp = new Date(startDate);
@@ -777,14 +840,52 @@
 
             const sortedKeys = Object.keys(groups).sort();
             const labels = sortedKeys.map(k => groups[k].label);
-            const percentLosses = [];
+            
+            // Build Dynamic Metric Configs based on Selected Toggle
+            let config = {};
+            if (currentTrendMetric === 'loss') {
+                config = {
+                    title: 'สัดส่วนความสูญเสีย (%)',
+                    targetVal: 1.10,
+                    lineColor: '#2563eb', // Indigo Blue
+                    bgColor: 'rgba(37, 99, 235, 0.08)',
+                    suffix: '%',
+                    decimals: 2,
+                    isGood: (val) => val <= 1.10,
+                    calcVal: (g) => g.opTime > 0 ? parseFloat(((g.downtime / g.opTime) * 100).toFixed(2)) : 0
+                };
+            } else if (currentTrendMetric === 'mttr') {
+                config = {
+                    title: 'ระยะเวลาซ่อมเฉลี่ย MTTR (นาที)',
+                    targetVal: 15,
+                    lineColor: '#8b5cf6', // Violet Purple
+                    bgColor: 'rgba(139, 92, 246, 0.08)',
+                    suffix: ' นาที',
+                    decimals: 0,
+                    isGood: (val) => val <= 15,
+                    calcVal: (g) => g.freq > 0 ? Math.round(g.downtime / g.freq) : 0
+                };
+            } else if (currentTrendMetric === 'mtbf') {
+                config = {
+                    title: 'ระยะห่างเฉลี่ยการเสีย MTBF (นาที)',
+                    targetVal: 1200,
+                    lineColor: '#10b981', // Emerald Green
+                    bgColor: 'rgba(16, 185, 129, 0.08)',
+                    suffix: ' นาที',
+                    decimals: 0,
+                    isGood: (val) => val >= 1200,
+                    calcVal: (g) => g.freq > 0 ? Math.round((g.opTime - g.downtime) / g.freq) : 0
+                };
+            }
+
+            const metricValues = [];
             const targets = [];
 
             sortedKeys.forEach(k => {
                 const g = groups[k];
-                const pct = g.opTime > 0 ? (g.downtime / g.opTime) * 100 : 0;
-                percentLosses.push(parseFloat(pct.toFixed(2)));
-                targets.push(1.10);
+                const val = config.calcVal(g);
+                metricValues.push(val);
+                targets.push(config.targetVal);
             });
 
             const ctx = document.getElementById('trendPerformanceChart').getContext('2d');
@@ -796,14 +897,14 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: '% เวลาสูญเสีย (% Loss)',
-                            data: percentLosses,
-                            borderColor: '#2563eb', 
-                            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                            label: config.title,
+                            data: metricValues,
+                            borderColor: config.lineColor, 
+                            backgroundColor: config.bgColor,
                             borderWidth: 3.5,
-                            tension: 0.4, // Beautiful Smooth curves
+                            tension: 0.4, // Beautiful curves
                             pointRadius: 6,
-                            pointBackgroundColor: '#2563eb',
+                            pointBackgroundColor: config.lineColor,
                             pointHoverRadius: 9,
                             fill: true,
                             yAxisID: 'y',
@@ -812,20 +913,20 @@
                                 align: 'top',
                                 anchor: 'end',
                                 offset: 8,
-                                // Conditional styling for box background based on meeting targets
+                                // Conditional Styling of Box Background & Text Color according to metric target
                                 backgroundColor: function(context) {
                                     const value = context.dataset.data[context.dataIndex];
-                                    return value <= 1.10 ? 'rgba(209, 250, 229, 0.95)' : 'rgba(254, 226, 226, 0.95)'; // Green / Red soft transparent
+                                    return config.isGood(value) ? 'rgba(209, 250, 229, 0.95)' : 'rgba(254, 226, 226, 0.95)'; // Transparent Green / Red
                                 },
                                 borderColor: function(context) {
                                     const value = context.dataset.data[context.dataIndex];
-                                    return value <= 1.10 ? '#10b981' : '#ef4444'; // Green / Red solid borders
+                                    return config.isGood(value) ? '#10b981' : '#ef4444'; // Green / Red Solid Borders
                                 },
                                 borderWidth: 1.5,
                                 borderRadius: 6,
                                 color: function(context) {
                                     const value = context.dataset.data[context.dataIndex];
-                                    return value <= 1.10 ? '#065f46' : '#991b1b'; // Dark Green / Dark Red texts
+                                    return config.isGood(value) ? '#065f46' : '#991b1b'; // Dark Green / Dark Red Text
                                 },
                                 font: {
                                     family: 'Prompt',
@@ -837,14 +938,14 @@
                                     const key = sortedKeys[index];
                                     if (!key) return '';
                                     const group = groups[key];
-                                    return `${value.toFixed(2)}%\n(${group.downtime.toLocaleString()} น. / ${group.freq} ครั้ง)`;
+                                    return `${value.toLocaleString()}${config.suffix}\n(${group.downtime.toLocaleString()} น. / ${group.freq} ครั้ง)`;
                                 },
                                 textAlign: 'center',
                                 padding: 6
                             }
                         },
                         {
-                            label: 'เป้าหมาย Target (1.10%)',
+                            label: `เป้าหมาย Target (${config.targetVal.toLocaleString()}${config.suffix})`,
                             data: targets,
                             borderColor: '#ef4444', 
                             borderDash: [6, 6],
@@ -877,11 +978,11 @@
                             position: 'left',
                             title: {
                                 display: true,
-                                text: 'สัดส่วนความสูญเสีย (%)',
+                                text: config.title,
                                 font: { family: 'Prompt', weight: 'bold', size: 12 }
                             },
                             ticks: {
-                                callback: value => value.toFixed(2) + '%',
+                                callback: value => value.toLocaleString() + config.suffix,
                                 font: { family: 'Prompt' }
                             },
                             grace: '20%', 
@@ -910,16 +1011,16 @@
                                     const index = context.dataIndex;
                                     const key = sortedKeys[index];
                                     const group = groups[key];
-                                    const pctVal = context.parsed.y;
+                                    const curVal = context.parsed.y;
                                     
                                     if (context.datasetIndex === 0) {
                                         return [
-                                            `• % เวลาสูญเสีย: ${pctVal.toFixed(2)}%`,
+                                            `• ${config.title}: ${curVal.toLocaleString()}${config.suffix}`,
                                             `• เวลาสูญเสียสะสม: ${group.downtime.toLocaleString()} นาที`,
                                             `• จำนวนครั้งที่เครื่องหยุด: ${group.freq.toLocaleString()} ครั้ง`
                                         ];
                                     } else {
-                                        return `🎯 เป้าหมาย Target: ${pctVal.toFixed(2)}%`;
+                                        return `🎯 เป้าหมาย Target: ${curVal.toLocaleString()}${config.suffix}`;
                                     }
                                 }
                             }
@@ -1108,7 +1209,7 @@
             window.requestAnimationFrame(step);
         }
 
-        // Render Data Table
+        // Render Data Table with empty cell support for empty metadata
         function updateTable(data) {
             const tbody = document.getElementById('tableBody');
             document.getElementById('tableRecordCount').innerText = data.length.toLocaleString();
@@ -1127,11 +1228,28 @@
                 tr.className = "bg-white border-b hover:bg-slate-50 transition-colors";
                 
                 let machineStation = `<span class="font-bold text-slate-700">${row['เครื่องจักร'] || '-'}</span><br><span class="text-xs text-slate-400">${row['Station'] || '-'}</span>`;
-                let freqTime = `<span class="font-semibold text-amber-600">${row['จำนวนครั้งที่หยุด Actual'] || 0} ครั้ง</span><br><span class="text-xs text-rose-500 font-bold">${row['เวลาหยุดเครื่อง Actual'] || 0} นาที</span>`;
                 
-                let parts = row['รายการอะไหล่ที่เปลี่ยน']?.trim() || 'ไม่มีการเปลี่ยน';
-                let qty = row['จำนวน'] ? ` (${row['จำนวน']})` : '';
-                let partsQty = parts + qty;
+                // คอลัมน์ หยุด(ครั้ง) / เวลา(นาที): ถ้าไม่มีข้อมูลจะไม่ขึ้นอะไรเลย
+                let stopFreq = parseFloat(row['จำนวนครั้งที่หยุด Actual']) || 0;
+                let stopTime = parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                let freqTime = "";
+                if (stopFreq > 0 || stopTime > 0) {
+                    freqTime = `<span class="font-semibold text-amber-600">${stopFreq} ครั้ง</span><br><span class="text-xs text-rose-500 font-bold">${stopTime} นาที</span>`;
+                }
+
+                // คอลัมน์ อะไหล่ที่เปลี่ยน (จำนวน): ถ้าไม่มีข้อมูลจะไม่ขึ้นอะไรเลย
+                let parts = row['รายการอะไหล่ที่เปลี่ยน']?.trim() || "";
+                let qty = row['จำนวน']?.trim() || "";
+                let partsQty = "";
+
+                // กรองคำที่ไม่ใช่การระบุรายการอะไหล่ที่เป็นชิ้นงาน
+                const noPartsWords = ["ไม่เปลี่ยนอะไหล่", "ไม่มีการเปลี่ยน", "ไม่มี", "-", "ปกติ", "ไม่ได้เปลี่ยนอะไหล่"];
+                const hasParts = parts && !noPartsWords.some(word => parts.includes(word));
+
+                if (hasParts) {
+                    let qtyDisplay = qty ? ` (${qty})` : "";
+                    partsQty = parts + qtyDisplay;
+                }
 
                 tr.innerHTML = `
                     <td class="px-4 py-4 whitespace-nowrap text-slate-600 font-medium">${formatDateForDisplay(row['วันที่'])}</td>
