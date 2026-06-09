@@ -285,7 +285,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Google Sheets CSV Export URLs
+        // ใช้ลิ้งก์ที่ Publish แล้ว
         const URL_SHEET_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
         const URL_SHEET_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
 
@@ -293,6 +293,23 @@
         let dailyData = [];
         let opTimeData = [];
         let charts = {};
+
+        // Helper: ดึงข้อมูลผ่าน PapaParse โดยตรง (แก้ปัญหา CORS ได้ดีกว่า Fetch ปกติ)
+        function fetchCSV(url) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(url, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        resolve(results.data);
+                    },
+                    error: function(err) {
+                        reject(err);
+                    }
+                });
+            });
+        }
 
         // Helper: Parse Thai Date format (DD/MM/YYYY) to JS Date Object
         function parseThaiDate(dateStr) {
@@ -325,36 +342,19 @@
         // Initialize Application
         async function initApp() {
             try {
-                // Fetch both CSVs concurrently
-                const [resDaily, resOpTime] = await Promise.all([
-                    fetch(URL_SHEET_DAILY),
-                    fetch(URL_SHEET_OPTIME)
+                // ดึงข้อมูลทั้ง 2 ไฟล์พร้อมกัน
+                const [dailyRes, opTimeRes] = await Promise.all([
+                    fetchCSV(URL_SHEET_DAILY),
+                    fetchCSV(URL_SHEET_OPTIME)
                 ]);
 
-                const csvDaily = await resDaily.text();
-                const csvOpTime = await resOpTime.text();
+                dailyData = dailyRes;
+                opTimeData = opTimeRes;
 
-                // Parse CSV to JSON
-                Papa.parse(csvDaily, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        dailyData = results.data;
-                    }
-                });
-
-                Papa.parse(csvOpTime, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        opTimeData = results.data;
-                    }
-                });
-
-                // Hide loading
+                // ซ่อน Loading Screen
                 document.getElementById('loadingOverlay').style.display = 'none';
                 
-                // Update timestamp
+                // อัพเดทเวลาล่าสุด
                 const now = new Date();
                 document.getElementById('lastUpdateText').innerText = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
 
@@ -362,8 +362,27 @@
                 updateDashboard();
 
             } catch (error) {
-                console.error("Error loading data:", error);
-                document.getElementById('loadingOverlay').innerHTML = `<div class="text-red-500 text-xl font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>เกิดข้อผิดพลาดในการโหลดข้อมูล</div><p class="text-gray-600 mt-2">โปรดตรวจสอบการเชื่อมต่ออินเตอร์เน็ตหรือสิทธิ์การเข้าถึงไฟล์</p>`;
+                console.error("Fetch Error:", error);
+                
+                // แสดงหน้าต่าง Error ชัดเจน พร้อมวิธีแก้ไขเบื้องต้น
+                document.getElementById('loadingOverlay').innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-lg text-center max-w-md border border-red-100">
+                        <div class="text-red-500 text-5xl mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">เข้าถึง Google Sheet ไม่ได้</h2>
+                        <div class="bg-red-50 text-red-700 text-xs p-3 rounded text-left overflow-auto mb-4 border border-red-200 font-mono">
+                            ${error.message || "Network Error"}
+                        </div>
+                        <div class="text-sm text-gray-600 text-left bg-gray-50 p-4 rounded-lg">
+                            <p class="font-bold mb-2 text-gray-800">🛠️ วิธีแก้ไข (ที่ Google Sheet):</p>
+                            <ol class="list-decimal pl-4 space-y-2">
+                                <li>ไปที่เมนู <b>ไฟล์</b> > <b>แชร์</b> > <b>เผยแพร่ทางเว็บ</b></li>
+                                <li>คลิก <b>"เนื้อหาและการตั้งค่าที่เผยแพร่"</b> (ด้านล่าง)</li>
+                                <li class="text-red-600 font-medium"><b>เอาเครื่องหมายถูกออก</b> ตรงคำว่า "ต้องลงชื่อเข้าใช้ด้วยบัญชีขององค์กร..."</li>
+                                <li>กดปุ่ม <b>เผยแพร่</b> อีกครั้ง แล้วรีเฟรชหน้านี้</li>
+                            </ol>
+                        </div>
+                    </div>
+                `;
             }
         }
 
@@ -459,8 +478,6 @@
                     else if (fMachine === 'YUELI') totalOpTime += yueli;
                     else if (fMachine === 'ISOWA') totalOpTime += isowa;
                     else if (fMachine === 'ALL') totalOpTime += (bhs + yueli + isowa);
-                    // If filter is specific to a sub-machine not in these 3, we might need custom logic, 
-                    // but based on prompt, we separate by BHS, YUELI, ISOWA.
                 }
             });
 
@@ -496,10 +513,6 @@
                 }
 
                 const sign = diff > 0 ? "+" : "";
-                // User logic: Diff ลบ ได้เป้าให้เป็นสีเขียว Diff บวก ให้เป็นสีแดง (สำหรับ Loss, MTTR)
-                // สำหรับ MTBF User บอก "Diffลบ ได้เป้าให้เป็นสีเขียว" ซึ่งอาจจะงงๆ เพราะ MTBF ยิ่งเยอะยิ่งดี 
-                // ผมจะใช้หลักการ: เขียว = บรรลุเป้าหมาย, แดง = ไม่บรรลุเป้าหมาย เพื่อให้ make sense ที่สุด
-                
                 let colorClass = isGood ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
                 let icon = isGood ? '<i class="fa-solid fa-check mr-1"></i>' : '<i class="fa-solid fa-xmark mr-1"></i>';
                 
@@ -518,7 +531,6 @@
             document.getElementById("diffMTTR").innerHTML = formatDiff(mttr, targetMTTR, 'lower_is_better');
 
             document.getElementById("kpiMTBF").innerText = mtbf.toFixed(2);
-            // MTBF: Higher actual is better. So if actual >= target, it's good.
             document.getElementById("diffMTBF").innerHTML = formatDiff(mtbf, targetMTBF, 'higher_is_better');
 
             // 6. Update Table
@@ -674,84 +686,4 @@
 
     </script>
 </body>
-</html>ให้คุณเป็นผู้เชี่ยวชาญด้นการเขียนโค้ด html ออกแบบ Dash Board จากไฟล์
-
-
-
-ผมต้องการให้คุณ อ่านไฟล์ Google Sheet 
-
-รายงาน Maintenance Electric 
-
--ชีท รายงาน ประจำวันจากลิ้งนี้ https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv
-
--ชีท เวลาเดินงานจากลิ้งนี้ https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv
-
-อ่านให้ละเอียด
-
-
-
-และช่วยเขียนโค้ด เพื่อจะสร้าง Dash Board
-
-
-
-สิ่งที่ต้องการคือ
-
-
-
--ให้สามารถเลือกวันที่ได้ 
-
-
-
--ให้มีตัวกรอง 
-
-ช่วงวันที่เลือก จาก คอลัม A
-
-เครื่องจักร จาก คอลัม G
-
-Station จาก คอลัม H
-
-ประเภทงาน จาก คอลัม J
-
-สถานะ จาก คอลัม M
-
-
-
-โดยให้มีการ์ด 
-
--เวลาเดินงาน ข้อมูลจากชีท เวลาเดินงาน โดยแยกเครื่องตามตัวกรอง วันที่ คอลัมA เครื่อง BHS คอลัมB,เครื่อง YUELI คอลัมC,เครื่อง ISOWA คอลัมD
-
--จำนวนครั้ง ข้อมูลจากชีท รายงาน ประจำวัน คอลัมF
-
--เวลาสูญเสีย ข้อมูลจากชีท รายงาน ประจำวัน คอลัมE
-
--%เวลาสูญเสีย คำนวณใช้ข้อมูล การ์ดเวลาสูญเสีย หาร การ์ดเวลาเดินงาน และทำเป็นเปอร์เซนโดยการ์ดนี้ให้มี Target คือ 1.10% และมีค่า Diff ด้วย ถ้าDiffลบ ได้เป้าให้เป็นสีเขียว Diffบวก ให้เป็นสีแดง
-
--ระยะเวลาซ่อมต่อครั้ง(MTTR) คำนวณใช้ข้อมูล การ์ดเวลาสูญเสีย หาร การ์ดจำนวนครั้ง โดยการ์ดนี้ให้มี Target คือ 15 นาที และมีค่า Diff ด้วย ถ้าDiffลบ ให้เป็นสีแดง Diffบวก ให้เป็นสีเขียว
-
--ระยะห่างในการซ่อมอีกครั้ง(MTBF) คำนวณใช้ข้อมูล การ์ดเวลาเดินงาน ลบ การ์ดเวลาสูญเสีย และค่อยหารการ์ดจำนวนครั้ง โดยการ์ดนี้ให้มี Target คือ 1200 นาที และมีค่า Diff ด้วย ถ้าDiffลบ ได้เป้าให้เป็นสีเขียว Diffบวก ให้เป็นสีแดง
-
-
-
--มีตารางรายละเอียดของคอลัม ในไฟล์
-
-วันที่ 
-
-เครื่องจักร,Station อยู่ด้วยกัน
-
-ปัญหา ความขัดข้องที่เกิด
-
-สาเหตุที่ตรวจพบ
-
-การแก้ไข และป้องกัน
-
-จำนวนครั้งที่หยุด,เวลาหยุดเครื่อง อยู่ด้วยกัน
-
-รายการอะไหล่ที่เปลี่ยน,จำนวน อยู่ด้วยกัน
-
-
-
--ช่วยออกให้มีกราฟที่จำเป็นละสามารถวิเคราะห์ได้ง่าย
-
-
-
-จะเอาโค้ดไปวางใน Github เพื่อทำเป็นลิ้งเปิดในมือถือได้ และสามารถดูรายละเอียดได้ทั้งหมด 
+</html>
