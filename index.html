@@ -560,14 +560,16 @@
             currentTrendMetric = metric;
             const metrics = ['loss', 'mttr', 'mtbf'];
             metrics.forEach(m => {
-                const btn = document.getElementById('btnMetric' + m.charAt(0).toUpperCase() + m.slice(1));
+                // Correctly resolve ID casing: loss -> btnMetricLoss, mttr -> btnMetricMTTR, mtbf -> btnMetricMTBF
+                const id = 'btnMetric' + (m === 'loss' ? 'Loss' : m.toUpperCase());
+                const btn = document.getElementById(id);
                 if (btn) {
                     if (m === metric) {
                         btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
-                        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                        btn.classList.remove('text-slate-600', 'hover:text-slate-900');
                     } else {
                         btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
-                        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                        btn.classList.add('text-slate-600', 'hover:text-slate-900');
                     }
                 }
             });
@@ -583,10 +585,10 @@
                 if (btn) {
                     if (b === interval) {
                         btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
-                        btn.classList.remove('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                        btn.classList.remove('text-slate-600', 'hover:text-slate-900');
                     } else {
                         btn.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
-                        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'bg-white');
+                        btn.classList.add('text-slate-600', 'hover:text-slate-900');
                     }
                 }
             });
@@ -729,16 +731,16 @@
 
             // Card 1: Premium Total Jobs Card (Minutes removed entirely, text sizes maximized)
             const totalCard = document.createElement('div');
-            totalCard.className = `flex items-center p-4 rounded-xl border bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700 transition-all duration-200 hover:shadow-md col-span-2 sm:col-span-1`;
+            totalCard.className = `flex items-center p-5 rounded-xl border bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700 transition-all duration-200 hover:shadow-md col-span-2 sm:col-span-1 shadow-md scale-[1.02]`;
             totalCard.innerHTML = `
-                <div class="p-3 rounded-lg bg-slate-700 mr-3 shadow-2xs text-amber-400 shrink-0">
-                    <i class="fa-solid fa-layer-group text-xl"></i>
+                <div class="p-3.5 rounded-lg bg-slate-700 mr-3 shadow-sm text-amber-400 shrink-0">
+                    <i class="fa-solid fa-layer-group text-2xl"></i>
                 </div>
                 <div class="overflow-hidden">
-                    <p class="text-xs font-bold text-slate-300 truncate tracking-wider uppercase">งานทั้งหมด (Total)</p>
+                    <p class="text-sm font-extrabold text-amber-300 tracking-wider uppercase">All work</p>
                     <div class="flex items-baseline mt-1">
-                        <span class="text-2xl md:text-3xl font-extrabold text-white">${totalJobsCount}</span>
-                        <span class="text-xs font-medium text-slate-300 ml-1.5">งาน</span>
+                        <span class="text-3xl md:text-4xl font-black text-white">${totalJobsCount}</span>
+                        <span class="text-sm font-semibold text-slate-200 ml-2">งาน</span>
                     </div>
                 </div>
             `;
@@ -868,7 +870,15 @@
                     suffix: '%',
                     decimals: 2,
                     isGood: (val) => val <= 1.10,
-                    calcVal: (g) => g.opTime > 0 ? parseFloat(((g.downtime / g.opTime) * 100).toFixed(2)) : 0
+                    calcVal: (g) => g.opTime > 0 ? parseFloat(((g.downtime / g.opTime) * 100).toFixed(2)) : 0,
+                    // Bring back the (นาที / ครั้ง) specifically for % Loss only
+                    formatter: function(value, context) {
+                        const index = context.dataIndex;
+                        const key = sortedKeys[index];
+                        if (!key) return '';
+                        const group = groups[key];
+                        return `${value.toFixed(2)}%\n(${group.downtime.toLocaleString()} น. / ${group.freq} ครั้ง)`;
+                    }
                 };
             } else if (currentTrendMetric === 'mttr') {
                 config = {
@@ -879,7 +889,11 @@
                     suffix: ' นาที',
                     decimals: 0,
                     isGood: (val) => val <= 15,
-                    calcVal: (g) => g.freq > 0 ? Math.round(g.downtime / g.freq) : 0
+                    calcVal: (g) => g.freq > 0 ? Math.round(g.downtime / g.freq) : 0,
+                    // Keep main value only, omit bracket values for MTTR
+                    formatter: function(value) {
+                        return `${value.toLocaleString()}${config.suffix}`;
+                    }
                 };
             } else if (currentTrendMetric === 'mtbf') {
                 config = {
@@ -890,7 +904,11 @@
                     suffix: ' นาที',
                     decimals: 0,
                     isGood: (val) => val >= 1200,
-                    calcVal: (g) => g.freq > 0 ? Math.round((g.opTime - g.downtime) / g.freq) : 0
+                    calcVal: (g) => g.freq > 0 ? Math.round((g.opTime - g.downtime) / g.freq) : 0,
+                    // Keep main value only, omit bracket values for MTBF
+                    formatter: function(value) {
+                        return `${value.toLocaleString()}${config.suffix}`;
+                    }
                 };
             }
 
@@ -949,10 +967,7 @@
                                     size: 10,
                                     weight: 'bold'
                                 },
-                                // Cleaned up output value: Only show metric values without the crowded bracket stats
-                                formatter: function(value) {
-                                    return `${value.toLocaleString()}${config.suffix}`;
-                                },
+                                formatter: config.formatter,
                                 textAlign: 'center',
                                 padding: 6
                             }
