@@ -833,12 +833,16 @@
             document.getElementById('diagnosticSection').classList.remove('hidden');
         }
 
+        // Configure Tab 1 Date Filter Default to Last Week (7 Days)
         function setupFilters() {
             let dates = dailyData.map(r => parseThaiDate(r['วันที่'])).filter(d => d != null && !isNaN(d));
             if(dates.length > 0) {
                 dates.sort((a,b) => a - b);
-                document.getElementById('filterStartDate').value = formatDateForInput(dates[0]);
-                document.getElementById('filterEndDate').value = formatDateForInput(dates[dates.length - 1]);
+                const latestDate = dates[dates.length - 1];
+                // Subtract 6 days to get a complete 7-day view ending with the latest data date
+                const lastWeekDate = new Date(latestDate.getTime() - 6 * 24 * 60 * 60 * 1000);
+                document.getElementById('filterStartDate').value = formatDateForInput(lastWeekDate);
+                document.getElementById('filterEndDate').value = formatDateForInput(latestDate);
             }
             const populateDropdown = (selectId, colName) => {
                 const select = document.getElementById(selectId);
@@ -861,16 +865,26 @@
                 document.getElementById('filterStation').value = 'ALL';
                 document.getElementById('filterJobType').value = 'ALL';
                 document.getElementById('filterStatus').value = 'ALL';
+                if(dates.length > 0) {
+                    const latestDate = dates[dates.length - 1];
+                    const lastWeekDate = new Date(latestDate.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    document.getElementById('filterStartDate').value = formatDateForInput(lastWeekDate);
+                    document.getElementById('filterEndDate').value = formatDateForInput(latestDate);
+                }
                 updateDashboard();
             });
         }
 
+        // Configure Tab 2 Date Filter Default to Last Week (7 Days)
         function setupFiltersSupport() {
             let dates = supportData.map(r => parseThaiDate(r['วันที่'])).filter(d => d != null && !isNaN(d));
             if(dates.length > 0) {
                 dates.sort((a,b) => a - b);
-                document.getElementById('supFilterStartDate').value = formatDateForInput(dates[0]);
-                document.getElementById('supFilterEndDate').value = formatDateForInput(dates[dates.length - 1]);
+                const latestDate = dates[dates.length - 1];
+                // Subtract 6 days to get a complete 7-day view ending with the latest data date
+                const lastWeekDate = new Date(latestDate.getTime() - 6 * 24 * 60 * 60 * 1000);
+                document.getElementById('supFilterStartDate').value = formatDateForInput(lastWeekDate);
+                document.getElementById('supFilterEndDate').value = formatDateForInput(latestDate);
             }
             const populateDropdownSup = (selectId, colName) => {
                 const select = document.getElementById(selectId);
@@ -891,6 +905,12 @@
                 document.getElementById('supFilterDept').value = 'ALL';
                 document.getElementById('supFilterJobType').value = 'ALL';
                 document.getElementById('supFilterStatus').value = 'ALL';
+                if(dates.length > 0) {
+                    const latestDate = dates[dates.length - 1];
+                    const lastWeekDate = new Date(latestDate.getTime() - 6 * 24 * 60 * 60 * 1000);
+                    document.getElementById('supFilterStartDate').value = formatDateForInput(lastWeekDate);
+                    document.getElementById('supFilterEndDate').value = formatDateForInput(latestDate);
+                }
                 updateSupportDashboard();
             });
         }
@@ -993,7 +1013,14 @@
 
             const percentLoss = totalOpTime > 0 ? (totalDowntime / totalOpTime) * 100 : 0;
             const mttr = totalFreq > 0 ? (totalDowntime / totalFreq) : 0;
-            const mtbf = totalFreq > 0 ? ((totalOpTime - totalDowntime) / totalFreq) : 0;
+            
+            // Adjust MTBF to fall back to Total Operating time if there is zero downtime
+            let mtbf = 0;
+            if (totalDowntime === 0) {
+                mtbf = totalOpTime; // If no downtime occurs, MTBF equals entire operation window run time
+            } else {
+                mtbf = totalFreq > 0 ? ((totalOpTime - totalDowntime) / totalFreq) : totalOpTime;
+            }
 
             animateValue("kpiOpTime", totalOpTime, 0);
             animateValue("kpiFreq", totalFreq, 0);
@@ -1044,13 +1071,25 @@
                        (fStatus === 'ALL' || row['สถานะ'] === fStatus);
             });
 
+            // Adjust Support operating time: If selected Department is BHS, YUELI or ISOWA, pull specifically from Operating sheet.
             let totalOpTime = 0;
             opTimeData.forEach(row => {
                 const rDate = parseThaiDate(row['วันที่']);
                 if (rDate && rDate >= startDate && rDate <= endDate) {
-                    totalOpTime += (parseFloat(row['เวลาเดินงาน BHS ACTUAL']) || 0) + 
-                                   (parseFloat(row['เวลาเดินงาน YUELI ACTUAL']) || 0) + 
-                                   (parseFloat(row['เวลาเดินงาน ISOWA ACTUAL']) || 0);
+                    let bhs = parseFloat(row['เวลาเดินงาน BHS ACTUAL']) || 0;
+                    let yueli = parseFloat(row['เวลาเดินงาน YUELI ACTUAL']) || 0;
+                    let isowa = parseFloat(row['เวลาเดินงาน ISOWA ACTUAL']) || 0;
+
+                    if (fDept === 'BHS') {
+                        totalOpTime += bhs;
+                    } else if (fDept === 'YUELI') {
+                        totalOpTime += yueli;
+                    } else if (fDept === 'ISOWA') {
+                        totalOpTime += isowa;
+                    } else {
+                        // Standard fallback to the combined sum of all three main line machines
+                        totalOpTime += (bhs + yueli + isowa);
+                    }
                 }
             });
 
@@ -1110,9 +1149,20 @@
                 if(d) {
                     const key = formatDateForInput(d);
                     if(dateMap[key]) {
-                        dateMap[key].opTime += (parseFloat(row['เวลาเดินงาน BHS ACTUAL']) || 0) + 
-                                               (parseFloat(row['เวลาเดินงาน YUELI ACTUAL']) || 0) + 
-                                               (parseFloat(row['เวลาเดินงาน ISOWA ACTUAL']) || 0);
+                        const fDept = document.getElementById('supFilterDept').value;
+                        let bhs = parseFloat(row['เวลาเดินงาน BHS ACTUAL']) || 0;
+                        let yueli = parseFloat(row['เวลาเดินงาน YUELI ACTUAL']) || 0;
+                        let isowa = parseFloat(row['เวลาเดินงาน ISOWA ACTUAL']) || 0;
+
+                        if (fDept === 'BHS') {
+                            dateMap[key].opTime += bhs;
+                        } else if (fDept === 'YUELI') {
+                            dateMap[key].opTime += yueli;
+                        } else if (fDept === 'ISOWA') {
+                            dateMap[key].opTime += isowa;
+                        } else {
+                            dateMap[key].opTime += (bhs + yueli + isowa);
+                        }
                     }
                 }
             });
@@ -1406,7 +1456,22 @@
             let cfg = {};
             if (currentTrendMetric === 'loss') { cfg = { title: 'สัดส่วนความสูญเสีย (%)', targetVal: 1.10, lineColor: '#2563eb', bgColor: 'rgba(37, 99, 235, 0.08)', suffix: '%', isGood: v => v <= 1.10, calcVal: g => g.opTime > 0 ? parseFloat(((g.downtime / g.opTime) * 100).toFixed(2)) : 0, formatter: (v, ctx) => `${v.toFixed(2)}%\n(${groups[sortedKeys[ctx.dataIndex]].downtime.toLocaleString()} น. / ${groups[sortedKeys[ctx.dataIndex]].freq} ครั้ง)` }; }
             else if (currentTrendMetric === 'mttr') { cfg = { title: 'ระยะเวลาซ่อมเฉลี่ย MTTR (นาที)', targetVal: 15, lineColor: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.08)', suffix: ' นาที', isGood: v => v <= 15, calcVal: g => g.freq > 0 ? Math.round(g.downtime / g.freq) : 0, formatter: v => `${v.toLocaleString()} นาที` }; }
-            else { cfg = { title: 'ระยะห่างเฉลี่ยการเสีย MTBF (นาที)', targetVal: 1200, lineColor: '#10b981', bgColor: 'rgba(16, 185, 129, 0.08)', suffix: ' นาที', isGood: v => v >= 1200, calcVal: g => g.freq > 0 ? Math.round((g.opTime - g.downtime) / g.freq) : 0, formatter: v => `${v.toLocaleString()} นาที` }; }
+            else { 
+                // Adjust MTBF line chart to use Operating Hours directly if downtime equals zero
+                cfg = { 
+                    title: 'ระยะห่างเฉลี่ยการเสีย MTBF (นาที)', 
+                    targetVal: 1200, 
+                    lineColor: '#10b981', 
+                    bgColor: 'rgba(16, 185, 129, 0.08)', 
+                    suffix: ' นาที', 
+                    isGood: v => v >= 1200, 
+                    calcVal: g => {
+                        if (g.downtime === 0) return g.opTime;
+                        return g.freq > 0 ? Math.round((g.opTime - g.downtime) / g.freq) : g.opTime;
+                    }, 
+                    formatter: v => `${v.toLocaleString()} นาที` 
+                }; 
+            }
             const vals = sortedKeys.map(k => cfg.calcVal(groups[k])), tgts = sortedKeys.map(() => cfg.targetVal);
             const ctx = document.getElementById('trendPerformanceChart').getContext('2d');
             if (charts.trendChart) charts.trendChart.destroy();
