@@ -76,7 +76,7 @@
         <div id="spinnerSection" class="text-center">
             <div class="spinner mb-4 mx-auto"></div>
             <h2 class="text-xl font-bold text-slate-700">กำลังประมวลผลข้อมูลแดชบอร์ดทั้งหมด...</h2>
-            <p class="text-slate-500 mt-1">กำลังดึงข้อมูลเรียลไทม์จากระบบคลาวด์ Google Sheet</p>
+            <p class="text-slate-500 mt-1">กำลังดึงและคลีนข้อมูลเรียลไทม์จากระบบคลาวด์ Google Sheet</p>
         </div>
         
         <!-- Dynamic Diagnostic & Config Portal (Will show only on error) -->
@@ -118,20 +118,20 @@
             <!-- Configuration Inputs Form -->
             <div class="border-t border-slate-150 pt-5">
                 <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
-                    <i class="fa-solid fa-gears mr-1.5 text-blue-500"></i> ปรับแต่งหรือเปลี่ยนลิงก์ Google Sheets (CSV เท่านั้น)
+                    <i class="fa-solid fa-gears mr-1.5 text-blue-500"></i> ปรับแต่งหรือเปลี่ยนลิงก์ Google Sheets (คัดลอกลิงก์จากเบราว์เซอร์มาวางได้เลย!)
                 </h3>
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV รายงาน ประจำวัน (Sheet 1):</label>
-                        <input type="text" id="inputUrlDaily" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์รายงาน ประจำวัน (Sheet 1):</label>
+                        <input type="text" id="inputUrlDaily" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="วางลิงก์จาก Google Sheets ของคุณที่นี่">
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV เวลาเดินงาน (Sheet 2):</label>
-                        <input type="text" id="inputUrlOpTime" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์เวลาเดินงาน (Sheet 2):</label>
+                        <input type="text" id="inputUrlOpTime" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="วางลิงก์จาก Google Sheets ของคุณที่นี่">
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV รายงาน ประจำวัน SUPPORT (Sheet 3):</label>
-                        <input type="text" id="inputUrlSupport" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์รายงาน ประจำวัน SUPPORT (Sheet 3):</label>
+                        <input type="text" id="inputUrlSupport" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="วางลิงก์จาก Google Sheets ของคุณที่นี่">
                     </div>
                 </div>
                 
@@ -147,14 +147,10 @@
 
             <!-- Visual Guide on How to Publish -->
             <div class="mt-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 text-xs text-slate-600">
-                <h4 class="font-bold text-blue-800 mb-2 flex items-center"><i class="fa-solid fa-circle-question mr-1.5"></i> วิธีการตั้งค่า "เผยแพร่ไปยังเว็บ (Publish to web)" เพื่อรับลิงก์ CSV:</h4>
-                <ol class="list-decimal pl-4 space-y-1 text-slate-500">
-                    <li>เปิดหน้า Google Sheets ของแผนกขึ้นมา</li>
-                    <li>กดเมนู <strong class="text-slate-700">ไฟล์ (File)</strong> &gt; <strong class="text-slate-700">แชร์ (Share)</strong> &gt; <strong class="text-slate-700">เผยแพร่ไปยังเว็บ (Publish to Web)</strong></li>
-                    <li>เปลี่ยนหัวข้อการแชร์จาก "ทั้งเอกสาร (Entire Document)" หรือแผ่นงาน ให้เลือกเป็นรายแผ่นงานที่คุณต้องการเผยแพร่</li>
-                    <li>เปลี่ยนรูปแบบผลลัพธ์จาก "เว็บเพจ (Web page)" ให้เปลี่ยนเป็น <strong class="text-slate-700">ค่าที่คั่นด้วยจุลภาค (.csv)</strong></li>
-                    <li>กดปุ่ม <strong class="text-blue-600">เผยแพร่ (Publish)</strong> แล้วคัดลอกลิงก์นั้นมาวางในช่องระบุด้านบน</li>
-                </ol>
+                <h4 class="font-bold text-blue-800 mb-2 flex items-center"><i class="fa-solid fa-circle-question mr-1.5"></i> คำแนะนำเพิ่มเติม:</h4>
+                <p class="text-slate-500 leading-relaxed">
+                    ระบบพัฒนาการสแกนลิงก์ขึ้นใหม่ ตอนนี้ท่านสามารถนำ **ลิงก์แชร์ตรง** จากหน้าต่างเบราว์เซอร์ของ Google Sheets มาวางในช่องด้านบนได้ทันที ระบบจะทำการแปลงลิงก์เป็นข้อมูลดิบและล้างรหัสภาษาที่ผิดพลาดของภาษาไทยให้อัตโนมัติ เพื่อป้องกันข้อมูลแสดงผลเป็นค่าว่างเปล่า (0)
+                </p>
             </div>
         </div>
     </div>
@@ -179,7 +175,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TAB 1: MAIN MAINTENANCE DASHBOARD (UNTOUCHED) -->
+    <!-- TAB 1: MAIN MAINTENANCE DASHBOARD -->
     <!-- ========================================== -->
     <div id="tabMainContent" class="min-h-screen p-4 md:p-6 lg:p-8 max-w-7xl mx-auto block">
         <!-- Header -->
@@ -429,7 +425,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TAB 2: SUPPORT MAINTENANCE DASHBOARD (NEW) -->
+    <!-- TAB 2: SUPPORT MAINTENANCE DASHBOARD -->
     <!-- ========================================== -->
     <div id="tabSupportContent" class="min-h-screen p-4 md:p-6 lg:p-8 max-w-7xl mx-auto hidden">
         <!-- Header -->
@@ -604,7 +600,7 @@
         // Register Chart.js DataLabels Plugin globally
         Chart.register(ChartDataLabels);
 
-        // DEFAULT Hardcoded Fallback URLs
+        // DEFAULT Hardcoded Fallback URLs (Published to web CSVs)
         const DEFAULT_URL_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
         const DEFAULT_URL_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
         const DEFAULT_URL_SUPPORT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=281516041&single=true&output=csv";
@@ -627,6 +623,26 @@
         let currentTrendInterval = 'day'; 
         let currentTrendMetric = 'loss'; 
         let currentTrendIntervalSup = 'day';
+
+        // Helper: Convert Google Sheet Share URL or normal URL to clean programmatic CSV Export URL
+        function convertToCsvUrl(url) {
+            if (!url) return "";
+            url = url.trim();
+            // If it's already structured for CSV download, pass it through directly
+            if (url.includes('output=csv') || url.includes('format=csv')) {
+                return url;
+            }
+            
+            // Check if it's a standard Google Sheets sharing URL, then extract key and format
+            const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (sheetIdMatch) {
+                const sheetId = sheetIdMatch[1];
+                const gidMatch = url.match(/gid=([0-9]+)/);
+                const gid = gidMatch ? gidMatch[1] : "0";
+                return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+            }
+            return url;
+        }
 
         // Pure Local Date Parser (Buddhist vs Gregorian converter)
         function parseThaiDate(dateStr) {
@@ -696,9 +712,8 @@
             }
         }
 
-        // App Initialization with Granular Debug diagnostics
+        // App Initialization with Granular Debug diagnostics & Auto-clipping of BOM values
         async function initApp() {
-            // Fill current URLs into Config inputs
             document.getElementById('inputUrlDaily').value = urlSheetDaily;
             document.getElementById('inputUrlOpTime').value = urlSheetOpTime;
             document.getElementById('inputUrlSupport').value = urlSheetSupport;
@@ -770,7 +785,7 @@
                 } else {
                     el.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800";
                     el.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> โหลดไม่ได้`;
-                    console.error("Diagnostic Failure:", errorText);
+                    console.error("Diagnostic Failure Log:", errorText);
                 }
             };
 
@@ -779,16 +794,21 @@
             applyDiagStatus('diagStatusSupport', sOk, sErr);
         }
 
-        // Save customized config and refresh
+        // Save customized config, automatically clean sharing links and refresh page
         function saveDatabaseConfig() {
-            const uDaily = document.getElementById('inputUrlDaily').value.trim();
-            const uOpTime = document.getElementById('inputUrlOpTime').value.trim();
-            const uSupport = document.getElementById('inputUrlSupport').value.trim();
+            const uDailyRaw = document.getElementById('inputUrlDaily').value.trim();
+            const uOpTimeRaw = document.getElementById('inputUrlOpTime').value.trim();
+            const uSupportRaw = document.getElementById('inputUrlSupport').value.trim();
 
-            if (!uDaily || !uOpTime || !uSupport) {
+            if (!uDailyRaw || !uOpTimeRaw || !uSupportRaw) {
                 alert("กรุณากรอกลิงก์ให้ครบถ้วนทุกช่องทาง");
                 return;
             }
+
+            // Auto-convert standard sheets URLs on the fly to avoid client publish configurations
+            const uDaily = convertToCsvUrl(uDailyRaw);
+            const uOpTime = convertToCsvUrl(uOpTimeRaw);
+            const uSupport = convertToCsvUrl(uSupportRaw);
 
             localStorage.setItem('url_sheet_daily', uDaily);
             localStorage.setItem('url_sheet_optime', uOpTime);
@@ -1313,6 +1333,61 @@
         // ==========================================
         // MAIN CODES (COPIED UNTOUCHED FOR TAB 1)
         // ==========================================
+        function renderJobTypeSummaryGrid(data, containerId) {
+            const grid = document.getElementById(containerId);
+            grid.innerHTML = '';
+            
+            const summary = {};
+            let allWorkCount = 0;
+            data.forEach(row => {
+                const type = row['ประเภทงาน']?.trim() || 'ไม่ระบุ';
+                if(!summary[type]) summary[type] = { count: 0, dt: 0 };
+                summary[type].count++;
+                summary[type].dt += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
+                allWorkCount++;
+            });
+
+            // Premium Total Jobs Card (All work)
+            const allWorkCard = document.createElement('div');
+            allWorkCard.className = "flex items-center p-4 rounded-xl border bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700 transition-all shadow-md min-w-0";
+            let fSize = allWorkCount >= 1000 ? 'text-xl sm:text-2xl md:text-3xl' : 'text-2xl sm:text-3xl md:text-3xl';
+            allWorkCard.innerHTML = `
+                <div class="p-2.5 rounded-lg bg-slate-700 mr-2.5 shadow text-amber-400 shrink-0"><i class="fa-solid fa-layer-group text-xl"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-amber-300 tracking-wider uppercase truncate">All work</p>
+                    <div class="flex items-baseline mt-1 min-w-0 flex-wrap">
+                        <span class="${fSize} font-black text-white truncate">${allWorkCount.toLocaleString()}</span>
+                        <span class="text-xs font-semibold text-slate-300 ml-1.5 shrink-0">งาน</span>
+                    </div>
+                </div>`;
+            grid.appendChild(allWorkCard);
+
+            const colors = {
+                'Downtime': { bg: 'bg-rose-50 text-rose-700 border-rose-100', icon: 'fa-solid fa-circle-stop' },
+                'Repair': { bg: 'bg-orange-50 text-orange-700 border-orange-100', icon: 'fa-solid fa-screwdriver-wrench' },
+                'Repair CMMS': { bg: 'bg-amber-50 text-amber-700 border-amber-100', icon: 'fa-solid fa-desktop' },
+                'PM CMMS': { bg: 'bg-blue-50 text-blue-700 border-blue-100', icon: 'fa-solid fa-calendar-check' },
+                'PM Plan': { bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: 'fa-solid fa-calendar-days' }
+            };
+            const defTheme = { bg: 'bg-slate-50 text-slate-700 border-slate-100', icon: 'fa-solid fa-tag' };
+
+            Object.entries(summary).forEach(([type, val]) => {
+                const theme = colors[type] || defTheme;
+                const card = document.createElement('div');
+                card.className = `flex items-center p-3.5 rounded-xl border ${theme.bg} transition-all min-w-0`;
+                card.innerHTML = `
+                    <div class="p-2.5 rounded-lg bg-white/90 mr-2.5 shadow-2xs shrink-0"><i class="${theme.icon} text-lg"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold text-slate-500 truncate" title="${type}">${type}</p>
+                        <div class="flex items-baseline space-x-1.5 mt-0.5 min-w-0 flex-wrap">
+                            <span class="text-lg font-bold truncate">${val.count.toLocaleString()} <span class="text-xs font-normal">งาน</span></span>
+                            ${type === 'Downtime' ? `<span class="text-[10px] opacity-75 shrink-0">(${val.dt} น.)</span>` : ''}
+                        </div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+
         function renderTrendChart(startDate, endDate, fMachine, filteredDaily) {
             const dateMap = {}; let temp = new Date(startDate);
             while (temp <= endDate) { dateMap[formatDateForInput(temp)] = { dateObj: new Date(temp), downtime: 0, freq: 0, opTime: 0 }; temp.setDate(temp.getDate() + 1); }
@@ -1390,7 +1465,22 @@
             window.requestAnimationFrame(step);
         }
 
-        function fetchCSV(url) { return new Promise((res, rej) => { Papa.parse(url, { download: true, header: true, skipEmptyLines: true, complete: r => res(r.data), error: e => rej(e) }); }); }
+        // Fetch CSV from URL and automatically sanitize and clean the UTF-8 BOM headers
+        function fetchCSV(url) { 
+            return new Promise((res, rej) => { 
+                Papa.parse(url, { 
+                    download: true, 
+                    header: true, 
+                    skipEmptyLines: 'greedy', 
+                    transformHeader: function(header) {
+                        // Crucial Fix: Clean up invisible UTF-8 BOM and leading/trailing spaces
+                        return header.replace(/^\ufeff/, "").trim();
+                    },
+                    complete: r => res(r.data), 
+                    error: e => rej(e) 
+                }); 
+            }); 
+        }
 
         window.onload = initApp;
     </script>
