@@ -46,12 +46,14 @@
         #loadingOverlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255,255,255,0.98);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
+            overflow-y: auto;
+            padding: 20px;
         }
         .spinner {
             border: 4px solid #f3f3f3;
@@ -69,21 +71,109 @@
 </head>
 <body class="text-slate-800 antialiased">
 
-    <!-- Loading Overlay -->
+    <!-- Loading & Diagnostic Overlay -->
     <div id="loadingOverlay">
-        <div class="spinner mb-4"></div>
-        <h2 class="text-xl font-bold text-slate-700">กำลังประมวลผลข้อมูลแดชบอร์ดทั้งหมด...</h2>
-        <p class="text-slate-500 mt-1">กำลังดึงข้อมูลเรียลไทม์และโครงสร้างชีท Support จาก Google Sheet</p>
+        <div id="spinnerSection" class="text-center">
+            <div class="spinner mb-4 mx-auto"></div>
+            <h2 class="text-xl font-bold text-slate-700">กำลังประมวลผลข้อมูลแดชบอร์ดทั้งหมด...</h2>
+            <p class="text-slate-500 mt-1">กำลังดึงข้อมูลเรียลไทม์จากระบบคลาวด์ Google Sheet</p>
+        </div>
+        
+        <!-- Dynamic Diagnostic & Config Portal (Will show only on error) -->
+        <div id="diagnosticSection" class="hidden max-w-2xl w-full bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-red-100 my-8">
+            <div class="text-red-500 text-5xl text-center mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 class="text-xl md:text-2xl font-bold text-center text-slate-800 mb-2">ตรวจพบลักษณะการเชื่อมต่อชีทขัดข้อง</h2>
+            <p class="text-slate-500 text-sm text-center mb-6">กรุณาตรวจสอบสถานะการเชื่อมต่อชีทแต่ละแท็บด้านล่าง เพื่อตั้งค่าลิงก์ใหม่ให้ถูกต้อง</p>
+            
+            <div class="space-y-4 mb-6">
+                <!-- Sheet 1 Connection -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">แผ่นงานที่ 1</span>
+                        <h4 class="font-bold text-sm text-slate-700">รายงาน ประจำวัน (ข้อมูลซ่อมเครื่องจักรหลัก)</h4>
+                        <p class="text-xs text-slate-400 mt-0.5 truncate max-w-md" id="diagUrlDaily">-</p>
+                    </div>
+                    <span id="diagStatusDaily" class="px-3 py-1 rounded-full text-xs font-bold">กำลังตรวจ...</span>
+                </div>
+                <!-- Sheet 2 Connection -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">แผ่นงานที่ 2</span>
+                        <h4 class="font-bold text-sm text-slate-700">เวลาเดินงาน (Operating Hours / BHS, YUELI, ISOWA)</h4>
+                        <p class="text-xs text-slate-400 mt-0.5 truncate max-w-md" id="diagUrlOpTime">-</p>
+                    </div>
+                    <span id="diagStatusOpTime" class="px-3 py-1 rounded-full text-xs font-bold">กำลังตรวจ...</span>
+                </div>
+                <!-- Sheet 3 Connection -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">แผ่นงานที่ 3</span>
+                        <h4 class="font-bold text-sm text-slate-700">รายงาน ประจำวัน SUPPORT (ข้อมูลสนับสนุนใหม่)</h4>
+                        <p class="text-xs text-slate-400 mt-0.5 truncate max-w-md" id="diagUrlSupport">-</p>
+                    </div>
+                    <span id="diagStatusSupport" class="px-3 py-1 rounded-full text-xs font-bold">กำลังตรวจ...</span>
+                </div>
+            </div>
+
+            <!-- Configuration Inputs Form -->
+            <div class="border-t border-slate-150 pt-5">
+                <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center">
+                    <i class="fa-solid fa-gears mr-1.5 text-blue-500"></i> ปรับแต่งหรือเปลี่ยนลิงก์ Google Sheets (CSV เท่านั้น)
+                </h3>
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV รายงาน ประจำวัน (Sheet 1):</label>
+                        <input type="text" id="inputUrlDaily" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV เวลาเดินงาน (Sheet 2):</label>
+                        <input type="text" id="inputUrlOpTime" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">ลิงก์ CSV รายงาน ประจำวัน SUPPORT (Sheet 3):</label>
+                        <input type="text" id="inputUrlSupport" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 mt-5">
+                    <button onclick="saveDatabaseConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-md">
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกและทดสอบใหม่
+                    </button>
+                    <button onclick="resetDefaultConfig()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-4 rounded-xl text-sm transition-all">
+                        คืนค่าเริ่มต้น
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visual Guide on How to Publish -->
+            <div class="mt-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 text-xs text-slate-600">
+                <h4 class="font-bold text-blue-800 mb-2 flex items-center"><i class="fa-solid fa-circle-question mr-1.5"></i> วิธีการตั้งค่า "เผยแพร่ไปยังเว็บ (Publish to web)" เพื่อรับลิงก์ CSV:</h4>
+                <ol class="list-decimal pl-4 space-y-1 text-slate-500">
+                    <li>เปิดหน้า Google Sheets ของแผนกขึ้นมา</li>
+                    <li>กดเมนู <strong class="text-slate-700">ไฟล์ (File)</strong> &gt; <strong class="text-slate-700">แชร์ (Share)</strong> &gt; <strong class="text-slate-700">เผยแพร่ไปยังเว็บ (Publish to Web)</strong></li>
+                    <li>เปลี่ยนหัวข้อการแชร์จาก "ทั้งเอกสาร (Entire Document)" หรือแผ่นงาน ให้เลือกเป็นรายแผ่นงานที่คุณต้องการเผยแพร่</li>
+                    <li>เปลี่ยนรูปแบบผลลัพธ์จาก "เว็บเพจ (Web page)" ให้เปลี่ยนเป็น <strong class="text-slate-700">ค่าที่คั่นด้วยจุลภาค (.csv)</strong></li>
+                    <li>กดปุ่ม <strong class="text-blue-600">เผยแพร่ (Publish)</strong> แล้วคัดลอกลิงก์นั้นมาวางในช่องระบุด้านบน</li>
+                </ol>
+            </div>
+        </div>
     </div>
 
     <!-- Navigation Tab System -->
     <div class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 flex space-x-2">
-            <button id="tabMainBtn" onclick="switchTab('main')" class="px-5 py-4 font-bold text-sm border-b-4 border-blue-600 text-blue-600 transition-all flex items-center">
-                <i class="fa-solid fa-bolt mr-2 text-amber-500"></i> Maintenance Electric Dashboard
-            </button>
-            <button id="tabSupportBtn" onclick="switchTab('support')" class="px-5 py-4 font-bold text-sm border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition-all flex items-center">
-                <i class="fa-solid fa-screwdriver-wrench mr-2 text-indigo-500"></i> Maintenance Electric Support Dashboard
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <div class="flex space-x-2">
+                <button id="tabMainBtn" onclick="switchTab('main')" class="px-5 py-4 font-bold text-sm border-b-4 border-blue-600 text-blue-600 transition-all flex items-center">
+                    <i class="fa-solid fa-bolt mr-2 text-amber-500"></i> Maintenance Electric Dashboard
+                </button>
+                <button id="tabSupportBtn" onclick="switchTab('support')" class="px-5 py-4 font-bold text-sm border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition-all flex items-center">
+                    <i class="fa-solid fa-screwdriver-wrench mr-2 text-indigo-500"></i> Maintenance Electric Support Dashboard
+                </button>
+            </div>
+            
+            <!-- Floating Config Tool Button -->
+            <button onclick="openConfigModalDirectly()" class="text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold shadow-xs transition-colors flex items-center mr-4 md:mr-0">
+                <i class="fa-solid fa-database mr-1.5 text-blue-500"></i> ตั้งค่าลิงก์เชื่อมต่อ (Database)
             </button>
         </div>
     </div>
@@ -514,11 +604,15 @@
         // Register Chart.js DataLabels Plugin globally
         Chart.register(ChartDataLabels);
 
-        // Google Sheets Pub URLs
-        const URL_SHEET_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
-        const URL_SHEET_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
-        // Verified URL for Support sheet (gid=281516041)
-        const URL_SHEET_SUPPORT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=281516041&single=true&output=csv";
+        // DEFAULT Hardcoded Fallback URLs
+        const DEFAULT_URL_DAILY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=0&single=true&output=csv";
+        const DEFAULT_URL_OPTIME = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=1881498261&single=true&output=csv";
+        const DEFAULT_URL_SUPPORT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJTzys96pLM72Ip3Pj5iqCLzRX54FB1wjuwDbZmB7o6uDgXtTFX251GprI7BX4WN_Iy13F-Uopi5sq/pub?gid=281516041&single=true&output=csv";
+
+        // Active Load URLs (Using localStorage if configured, otherwise falling back to default)
+        let urlSheetDaily = localStorage.getItem('url_sheet_daily') || DEFAULT_URL_DAILY;
+        let urlSheetOpTime = localStorage.getItem('url_sheet_optime') || DEFAULT_URL_OPTIME;
+        let urlSheetSupport = localStorage.getItem('url_sheet_support') || DEFAULT_URL_SUPPORT;
 
         // Global Data Stores
         let dailyData = [];
@@ -602,44 +696,121 @@
             }
         }
 
-        // App Initialization
+        // App Initialization with Granular Debug diagnostics
         async function initApp() {
+            // Fill current URLs into Config inputs
+            document.getElementById('inputUrlDaily').value = urlSheetDaily;
+            document.getElementById('inputUrlOpTime').value = urlSheetOpTime;
+            document.getElementById('inputUrlSupport').value = urlSheetSupport;
+
+            document.getElementById('diagUrlDaily').innerText = urlSheetDaily;
+            document.getElementById('diagUrlOpTime').innerText = urlSheetOpTime;
+            document.getElementById('diagUrlSupport').innerText = urlSheetSupport;
+
+            let dailyOk = false, opTimeOk = false, supportOk = false;
+            let dailyErr = "", opTimeErr = "", supportErr = "";
+
+            // Test Sheet 1 Load
             try {
-                const [dailyRes, opTimeRes, supportRes] = await Promise.all([
-                    fetchCSV(URL_SHEET_DAILY),
-                    fetchCSV(URL_SHEET_OPTIME),
-                    fetchCSV(URL_SHEET_SUPPORT)
-                ]);
-
-                dailyData = dailyRes;
-                opTimeData = opTimeRes;
-                supportData = supportRes;
-
-                document.getElementById('loadingOverlay').style.display = 'none';
-                
-                const now = new Date();
-                const formattedTime = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
-                if (document.getElementById('lastUpdateText')) document.getElementById('lastUpdateText').innerText = formattedTime;
-                if (document.getElementById('lastUpdateTextSup')) document.getElementById('lastUpdateTextSup').innerText = formattedTime;
-
-                setupFilters();
-                setupFiltersSupport();
-                setupInteractiveControls();
-                
-                // Initialize both components
-                changeTrendInterval('day');
-                changeTrendIntervalSup('day');
-                
-            } catch (error) {
-                console.error("Critical Failure Loading Dashboard Data:", error);
-                document.getElementById('loadingOverlay').innerHTML = `
-                    <div class="bg-white p-6 rounded-2xl shadow-lg text-center max-w-md border border-red-100">
-                        <div class="text-red-500 text-5xl mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                        <h2 class="text-xl font-bold text-gray-800 mb-2">โครงสร้างชีทขัดข้องหรือ URL สิทธิ์การเข้าถึงไม่ถูกต้อง</h2>
-                        <p class="text-slate-500 text-sm mb-4">กรุณาตรวจสอบว่าชีท 'รายงาน ประจำวัน SUPPROT' ถูกเปิดเผยแพร่สาธารณะ (Publish to Web) เป็นไฟล์ CSV แล้วหรือยัง</p>
-                    </div>
-                `;
+                dailyData = await fetchCSV(urlSheetDaily);
+                dailyOk = dailyData.length > 0;
+            } catch (e) {
+                dailyErr = e.message || "Failed Network Handshake";
             }
+
+            // Test Sheet 2 Load
+            try {
+                opTimeData = await fetchCSV(urlSheetOpTime);
+                opTimeOk = opTimeData.length > 0;
+            } catch (e) {
+                opTimeErr = e.message || "Failed Network Handshake";
+            }
+
+            // Test Sheet 3 Load (Support Sheet)
+            try {
+                supportData = await fetchCSV(urlSheetSupport);
+                supportOk = supportData.length > 0;
+            } catch (e) {
+                supportErr = e.message || "Failed Network Handshake";
+            }
+
+            // If any component fails to fetch, launch the Diagnostic Control Panel
+            if (!dailyOk || !opTimeOk || !supportOk) {
+                showErrorDiagnostic(dailyOk, dailyErr, opTimeOk, opTimeErr, supportOk, supportErr);
+                return;
+            }
+
+            // If successful, hide diagnostics & loader, render regular UI
+            document.getElementById('loadingOverlay').style.display = 'none';
+            
+            const now = new Date();
+            const formattedTime = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
+            if (document.getElementById('lastUpdateText')) document.getElementById('lastUpdateText').innerText = formattedTime;
+            if (document.getElementById('lastUpdateTextSup')) document.getElementById('lastUpdateTextSup').innerText = formattedTime;
+
+            setupFilters();
+            setupFiltersSupport();
+            setupInteractiveControls();
+            
+            // Render default view states
+            changeTrendInterval('day');
+            changeTrendIntervalSup('day');
+        }
+
+        // Show detailed diagnostic panel to point exactly which sheet failed and why
+        function showErrorDiagnostic(dOk, dErr, oOk, oErr, sOk, sErr) {
+            document.getElementById('spinnerSection').classList.add('hidden');
+            document.getElementById('diagnosticSection').classList.remove('hidden');
+
+            const applyDiagStatus = (elementId, ok, errorText) => {
+                const el = document.getElementById(elementId);
+                if (ok) {
+                    el.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800";
+                    el.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> เชื่อมต่อสำเร็จ`;
+                } else {
+                    el.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800";
+                    el.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1"></i> โหลดไม่ได้`;
+                    console.error("Diagnostic Failure:", errorText);
+                }
+            };
+
+            applyDiagStatus('diagStatusDaily', dOk, dErr);
+            applyDiagStatus('diagStatusOpTime', oOk, oErr);
+            applyDiagStatus('diagStatusSupport', sOk, sErr);
+        }
+
+        // Save customized config and refresh
+        function saveDatabaseConfig() {
+            const uDaily = document.getElementById('inputUrlDaily').value.trim();
+            const uOpTime = document.getElementById('inputUrlOpTime').value.trim();
+            const uSupport = document.getElementById('inputUrlSupport').value.trim();
+
+            if (!uDaily || !uOpTime || !uSupport) {
+                alert("กรุณากรอกลิงก์ให้ครบถ้วนทุกช่องทาง");
+                return;
+            }
+
+            localStorage.setItem('url_sheet_daily', uDaily);
+            localStorage.setItem('url_sheet_optime', uOpTime);
+            localStorage.setItem('url_sheet_support', uSupport);
+
+            // Re-ignite app
+            window.location.reload();
+        }
+
+        // Reset database URLs to standard fallbacks
+        function resetDefaultConfig() {
+            localStorage.removeItem('url_sheet_daily');
+            localStorage.removeItem('url_sheet_optime');
+            localStorage.removeItem('url_sheet_support');
+            window.location.reload();
+        }
+
+        // Trigger config console overlay anytime
+        function openConfigModalDirectly() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('spinnerSection').classList.add('hidden');
+            document.getElementById('diagnosticSection').classList.remove('hidden');
         }
 
         function setupFilters() {
@@ -844,7 +1015,6 @@
             const fJobType = document.getElementById('supFilterJobType').value;
             const fStatus = document.getElementById('supFilterStatus').value;
 
-            // 1. Filter Support dataset (A=วันที่, B=หน่วยงาน, I=ประเภทงาน, M=สถานะ)
             const filteredSupport = supportData.filter(row => {
                 const rDate = parseThaiDate(row['วันที่']);
                 if(!rDate || isNaN(rDate)) return false;
@@ -854,7 +1024,6 @@
                        (fStatus === 'ALL' || row['สถานะ'] === fStatus);
             });
 
-            // 2. Fetch Operating Run time according to chosen dates
             let totalOpTime = 0;
             opTimeData.forEach(row => {
                 const rDate = parseThaiDate(row['วันที่']);
@@ -865,7 +1034,6 @@
                 }
             });
 
-            // 3. Accumulate metrics from Column K (Downtime) and L (Breakdown Freq)
             let totalDowntime = 0, totalFreq = 0;
             filteredSupport.forEach(row => {
                 totalDowntime += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
@@ -875,13 +1043,11 @@
             const percentLoss = totalOpTime > 0 ? (totalDowntime / totalOpTime) * 100 : 0;
             const targetSupportLoss = 0.05;
 
-            // Render Core Support KPIs
             animateValue("supKpiOpTime", totalOpTime, 0);
             animateValue("supKpiFreq", totalFreq, 0);
             animateValue("supKpiDowntime", totalDowntime, 0);
             document.getElementById("supKpiPercentLoss").innerText = percentLoss.toFixed(3) + "%";
 
-            // Calc Diff with strict conditions: Negative/Zero Diff = Green (Goal met) | Positive Diff = Red (Exceeded)
             let diffVal = percentLoss - targetSupportLoss;
             let isTargetAchieved = diffVal <= 0;
             let diffSign = diffVal > 0 ? "+" : "";
@@ -891,67 +1057,10 @@
                 </span>
             `;
 
-            // Render Grid summaries, charts and tables
             renderJobTypeSummaryGrid(filteredSupport, 'supJobTypeSummaryGrid');
             renderSupportTrendChart(startDate, endDate, filteredSupport, totalOpTime);
             renderSupportCharts(filteredSupport);
             renderSupportTable(filteredSupport);
-        }
-
-        // Shared dynamic Grid Generator for Job Type summaries (styled exactly like Tab 1)
-        function renderJobTypeSummaryGrid(data, containerId) {
-            const grid = document.getElementById(containerId);
-            grid.innerHTML = '';
-            
-            const summary = {};
-            let allWorkCount = 0;
-            data.forEach(row => {
-                const type = row['ประเภทงาน']?.trim() || 'ไม่ระบุ';
-                if(!summary[type]) summary[type] = { count: 0, dt: 0 };
-                summary[type].count++;
-                summary[type].dt += parseFloat(row['เวลาหยุดเครื่อง Actual']) || 0;
-                allWorkCount++;
-            });
-
-            // Premium Total Jobs Card (All work)
-            const allWorkCard = document.createElement('div');
-            allWorkCard.className = "flex items-center p-4 rounded-xl border bg-gradient-to-br from-slate-800 to-slate-900 text-white border-slate-700 transition-all shadow-md min-w-0";
-            let fSize = allWorkCount >= 1000 ? 'text-xl sm:text-2xl md:text-3xl' : 'text-2xl sm:text-3xl md:text-3xl';
-            allWorkCard.innerHTML = `
-                <div class="p-2.5 rounded-lg bg-slate-700 mr-2.5 shadow text-amber-400 shrink-0"><i class="fa-solid fa-layer-group text-xl"></i></div>
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold text-amber-300 tracking-wider uppercase truncate">All work</p>
-                    <div class="flex items-baseline mt-1 min-w-0 flex-wrap">
-                        <span class="${fSize} font-black text-white truncate">${allWorkCount.toLocaleString()}</span>
-                        <span class="text-xs font-semibold text-slate-300 ml-1.5 shrink-0">งาน</span>
-                    </div>
-                </div>`;
-            grid.appendChild(allWorkCard);
-
-            const colors = {
-                'Downtime': { bg: 'bg-rose-50 text-rose-700 border-rose-100', icon: 'fa-solid fa-circle-stop' },
-                'Repair': { bg: 'bg-orange-50 text-orange-700 border-orange-100', icon: 'fa-solid fa-screwdriver-wrench' },
-                'Repair CMMS': { bg: 'bg-amber-50 text-amber-700 border-amber-100', icon: 'fa-solid fa-desktop' },
-                'PM CMMS': { bg: 'bg-blue-50 text-blue-700 border-blue-100', icon: 'fa-solid fa-calendar-check' },
-                'PM Plan': { bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: 'fa-solid fa-calendar-days' }
-            };
-            const defTheme = { bg: 'bg-slate-50 text-slate-700 border-slate-100', icon: 'fa-solid fa-tag' };
-
-            Object.entries(summary).forEach(([type, val]) => {
-                const theme = colors[type] || defTheme;
-                const card = document.createElement('div');
-                card.className = `flex items-center p-3.5 rounded-xl border ${theme.bg} transition-all min-w-0`;
-                card.innerHTML = `
-                    <div class="p-2.5 rounded-lg bg-white/90 mr-2.5 shadow-2xs shrink-0"><i class="${theme.icon} text-lg"></i></div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-semibold text-slate-500 truncate" title="${type}">${type}</p>
-                        <div class="flex items-baseline space-x-1.5 mt-0.5 min-w-0 flex-wrap">
-                            <span class="text-lg font-bold truncate">${val.count.toLocaleString()} <span class="text-xs font-normal">งาน</span></span>
-                            ${type === 'Downtime' ? `<span class="text-[10px] opacity-75 shrink-0">(${val.dt} น.)</span>` : ''}
-                        </div>
-                    </div>`;
-                grid.appendChild(card);
-            });
         }
 
         // ==========================================
@@ -1074,9 +1183,7 @@
         }
 
         function renderSupportCharts(data) {
-            // Doughnut for Job types
             const types = {};
-            // Bar for Top 5 Depts
             const depts = {};
 
             data.forEach(row => {
@@ -1087,7 +1194,6 @@
                 depts[dp] = (depts[dp] || 0) + 1;
             });
 
-            // Doughnut Chart
             const ctxPie = document.getElementById('supJobTypePieChart').getContext('2d');
             if(charts.supPie) charts.supPie.destroy();
             charts.supPie = new Chart(ctxPie, {
@@ -1120,7 +1226,6 @@
                 }
             });
 
-            // Horizontal Bar Chart
             const sortedDepts = Object.entries(depts).sort((a,b) => b[1] - a[1]).slice(0, 5);
             const ctxBar = document.getElementById('supDeptBarChart').getContext('2d');
             if(charts.supBar) charts.supBar.destroy();
@@ -1153,7 +1258,6 @@
             });
         }
 
-        // Support Table Row Render with Grouped Fields (ตรงเงื่อนไข)
         function renderSupportTable(data) {
             const tbody = document.getElementById('supTableBody');
             document.getElementById('supTableRecordCount').innerText = data.length.toLocaleString();
