@@ -530,6 +530,104 @@
             </div>
         </section>
 
+        <!-- CMMS Notification Job Summary Section (Locked past 30 Days) -->
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-3 border-b border-slate-100 gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-desktop text-indigo-600 mr-2"></i> 📊 สรุปเกี่ยวกับงานแจ้งซ่อมในระบบ CMMS
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1">ข้อมูลสรุปนี้ถูกล็อกไว้ที่ช่วง 30 วันย้อนหลังล่าสุด และไม่ขึ้นกับตัวกรองใดๆ ในหน้าแดชบอร์ด</p>
+                </div>
+                <div class="text-sm font-semibold text-indigo-700 bg-indigo-50/80 px-4 py-2 rounded-xl border border-indigo-100/50 flex items-center" id="cmmsDateRangeText">
+                    <i class="fa-regular fa-calendar-days mr-2"></i>ช่วงข้อมูล: - ถึง -
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- CMMS Close Within 30 Days -->
+                <div class="bg-gradient-to-b from-slate-50 to-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-bold text-slate-700 flex items-center">
+                                <i class="fa-solid fa-circle-check text-emerald-500 mr-1.5"></i> ปิดใบงานแจ้งซ่อมภายใน 30 วัน
+                            </span>
+                            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-lg">Target 100%</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4 text-xs">
+                            <div class="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                                <p class="text-slate-500 font-semibold mb-1">งานทั้งหมด (คอลัมน์ O)</p>
+                                <p class="text-2xl font-extrabold text-slate-800" id="cmmsCloseTotal">0</p>
+                            </div>
+                            <div class="bg-rose-50/30 p-3 rounded-xl border border-rose-100/40">
+                                <p class="text-rose-500 font-semibold mb-1">เกินกำหนด (คอลัมน์ N)</p>
+                                <p class="text-2xl font-extrabold text-rose-600" id="cmmsCloseOver">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500">อัตราความสำเร็จ KPI</span>
+                        <span class="text-2xl font-black text-indigo-600" id="cmmsCloseKpi">0.00%</span>
+                    </div>
+                </div>
+
+                <!-- Repeat Repair CMMS -->
+                <div class="bg-gradient-to-b from-slate-50 to-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-bold text-slate-700 flex items-center">
+                                <i class="fa-solid fa-rotate text-amber-500 mr-1.5"></i> แจ้งซ่อมซ้ำอาการเดิม > 30 วัน
+                            </span>
+                            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-lg">Target 100%</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mb-4 text-xs">
+                            <div class="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                                <p class="text-slate-500 font-semibold mb-1">งานทั้งหมด (คอลัมน์ O)</p>
+                                <p class="text-2xl font-extrabold text-slate-800" id="cmmsRepeatTotal">0</p>
+                            </div>
+                            <div class="bg-amber-50/30 p-3 rounded-xl border border-amber-100/40">
+                                <p class="text-amber-600 font-semibold mb-1">งานซ้ำ (คอลัมน์ Q)</p>
+                                <p class="text-2xl font-extrabold text-amber-600" id="cmmsRepeatCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500">อัตราความสำเร็จ KPI</span>
+                        <span class="text-2xl font-black text-indigo-600" id="cmmsRepeatKpi">0.00%</span>
+                    </div>
+                </div>
+
+                <!-- Current Status -->
+                <div class="bg-gradient-to-b from-slate-50 to-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-bold text-slate-700 flex items-center">
+                                <i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> สถานะงานแจ้งซ่อมปัจจุบัน
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 mb-4 text-xs">
+                            <div class="bg-slate-50/50 p-2 rounded-xl border border-slate-100 text-center">
+                                <p class="text-slate-500 font-semibold mb-1 truncate">งานทั้งหมด</p>
+                                <p class="text-xl font-extrabold text-slate-800" id="cmmsStatusTotal">0</p>
+                            </div>
+                            <div class="bg-emerald-50/30 p-2 rounded-xl border border-emerald-100/40 text-center">
+                                <p class="text-emerald-600 font-semibold mb-1 truncate">ปิดงาน</p>
+                                <p class="text-xl font-extrabold text-emerald-600" id="cmmsStatusClosed">0</p>
+                            </div>
+                            <div class="bg-rose-50/30 p-2 rounded-xl border border-rose-100/40 text-center">
+                                <p class="text-rose-500 font-semibold mb-1 truncate">งานค้าง</p>
+                                <p class="text-xl font-extrabold text-rose-600" id="cmmsStatusPending">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500">สัดส่วนการปิดงาน</span>
+                        <span class="text-lg font-black text-slate-700" id="cmmsStatusRatio">0 / 0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Job Type Summary Support -->
         <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
             <h3 class="text-lg font-semibold text-slate-700 mb-4 flex items-center">
@@ -614,6 +712,7 @@
         let dailyData = [];
         let opTimeData = [];
         let supportData = [];
+        let cmmsData = []; // Store CMMS Repair records
         let charts = {};
 
         // Tab State
@@ -722,8 +821,8 @@
             document.getElementById('diagUrlOpTime').innerText = urlSheetOpTime;
             document.getElementById('diagUrlSupport').innerText = urlSheetSupport;
 
-            let dailyOk = false, opTimeOk = false, supportOk = false;
-            let dailyErr = "", opTimeErr = "", supportErr = "";
+            let dailyOk = false, opTimeOk = false, supportOk = false, cmmsOk = false;
+            let dailyErr = "", opTimeErr = "", supportErr = "", cmmsErr = "";
 
             // Test Sheet 1 Load
             try {
@@ -749,9 +848,18 @@
                 supportErr = e.message || "Failed Network Handshake";
             }
 
+            // Test CMMS Sheet Load
+            const URL_CMMS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxXQbTmD1pVBH_p1P61c3S5B_SreSyN9DM8onU7NX1mZ92E-8923rM8yVeuex59cQpSUV1Mql0NM8n/pub?gid=318172741&single=true&output=csv";
+            try {
+                cmmsData = await fetchCSV(URL_CMMS);
+                cmmsOk = cmmsData.length > 0;
+            } catch (e) {
+                cmmsErr = e.message || "Failed Network Handshake";
+            }
+
             // If any component fails to fetch, launch the Diagnostic Control Panel
-            if (!dailyOk || !opTimeOk || !supportOk) {
-                showErrorDiagnostic(dailyOk, dailyErr, opTimeOk, opTimeErr, supportOk, supportErr);
+            if (!dailyOk || !opTimeOk || !supportOk || !cmmsOk) {
+                showErrorDiagnostic(dailyOk, dailyErr, opTimeOk, opTimeErr, supportOk, supportErr, cmmsOk, cmmsErr);
                 return;
             }
 
@@ -773,7 +881,7 @@
         }
 
         // Show detailed diagnostic panel to point exactly which sheet failed and why
-        function showErrorDiagnostic(dOk, dErr, oOk, oErr, sOk, sErr) {
+        function showErrorDiagnostic(dOk, dErr, oOk, oErr, sOk, sErr, cOk, cErr) {
             document.getElementById('spinnerSection').classList.add('hidden');
             document.getElementById('diagnosticSection').classList.remove('hidden');
 
@@ -792,6 +900,25 @@
             applyDiagStatus('diagStatusDaily', dOk, dErr);
             applyDiagStatus('diagStatusOpTime', oOk, oErr);
             applyDiagStatus('diagStatusSupport', sOk, sErr);
+
+            // Dynamic inclusion of CMMS sheet status inside the diagnostic panel if failed
+            const diagList = document.querySelector('#diagnosticSection .space-y-4.mb-6');
+            if (diagList && !document.getElementById('diagStatusCmms')) {
+                const cmmsDiv = document.createElement('div');
+                cmmsDiv.className = "p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3";
+                cmmsDiv.innerHTML = `
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">แผ่นงานที่ 4</span>
+                        <h4 class="font-bold text-sm text-slate-700">ข้อมูลแจ้งซ่อม CMMS (ติดตามสถานะในระบบ)</h4>
+                        <p class="text-xs text-slate-400 mt-0.5 truncate max-w-md">https://docs.google.com/spreadsheets/d/e/.../pub?gid=318172741</p>
+                    </div>
+                    <span id="diagStatusCmms" class="px-3 py-1 rounded-full text-xs font-bold">กำลังตรวจ...</span>
+                `;
+                diagList.appendChild(cmmsDiv);
+            }
+            if (document.getElementById('diagStatusCmms')) {
+                applyDiagStatus('diagStatusCmms', cOk, cErr);
+            }
         }
 
         // Save customized config, automatically clean sharing links and refresh page
@@ -1052,6 +1179,10 @@
         // ==========================================
         function updateSupportDashboard() {
             if(currentTab !== 'support') return;
+
+            // Render Locked CMMS metrics (ignores page filters, locked to 30 days)
+            updateCmmsSummary();
+
             const startStr = document.getElementById('supFilterStartDate').value;
             const endStr = document.getElementById('supFilterEndDate').value;
             const startDate = startStr ? parseInputDate(startStr) : new Date(1970,0,1);
@@ -1123,6 +1254,94 @@
         }
 
         // ==========================================
+        // CMMS TRACKING METRICS SUMMARY GENERATOR
+        // ==========================================
+        function updateCmmsSummary() {
+            if (!cmmsData || cmmsData.length === 0) return;
+
+            // Safe utility to read column value by index (resilient to dynamic header/BOM mutations)
+            const getColVal = (row, colIndex) => {
+                const keys = Object.keys(row);
+                if (keys.length <= colIndex) return "";
+                return row[keys[colIndex]] ? row[keys[colIndex]].trim() : "";
+            };
+
+            // Parse dates to find latest date (วันที่ปัจจุบัน) in Column A (index 0)
+            let cmmsDates = cmmsData.map(row => parseThaiDate(getColVal(row, 0))).filter(d => d != null && !isNaN(d));
+            let latestCmmsDate = new Date();
+            if (cmmsDates.length > 0) {
+                latestCmmsDate = new Date(Math.max(...cmmsDates.map(d => d.getTime())));
+            }
+
+            // Calculate locked past 30 days window bounds
+            const limitStartDate = new Date(latestCmmsDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+            limitStartDate.setHours(0, 0, 0, 0);
+            const limitEndDate = new Date(latestCmmsDate);
+            limitEndDate.setHours(23, 59, 59, 999);
+
+            // Display locked date range inside header
+            const formatThDate = (d) => {
+                return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + (d.getFullYear() < 2500 ? 543 : 0)}`;
+            };
+            document.getElementById('cmmsDateRangeText').innerHTML = `<i class="fa-regular fa-calendar-days mr-2"></i>ช่วงข้อมูล: ${formatThDate(limitStartDate)} ถึง ${formatThDate(limitEndDate)}`;
+
+            // Filter raw CMMS data solely by this locked date range
+            const cmmsFiltered = cmmsData.filter(row => {
+                const rDate = parseThaiDate(getColVal(row, 0));
+                if (!rDate || isNaN(rDate)) return false;
+                return rDate >= limitStartDate && rDate <= limitEndDate;
+            });
+
+            // 1. KPI: ปิดใบงานแจ้งซ่อมภายใน 30 วัน Target 100%
+            // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14) ที่มีค่าไม่ว่าง
+            const closeTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const totalClose = closeTotalRows.length;
+
+            // การ์ดงานเกินกำหนด: นับจากคอลัม N (index 13) ที่มีข้อความ "เกินกำหนด"
+            const countOver = closeTotalRows.filter(row => getColVal(row, 13) === "เกินกำหนด").length;
+
+            // การ์ด % KPI: นับจากคอลัม N ที่มีข้อความ "ไม่เกินกำหนด" หาร การ์ดงานทั้งหมด ทำเป็นเปอเซน
+            const countNotOver = closeTotalRows.filter(row => getColVal(row, 13) === "ไม่เกินกำหนด").length;
+            const closeKpiPct = totalClose > 0 ? (countNotOver / totalClose) * 100 : 0;
+
+            document.getElementById('cmmsCloseTotal').innerText = totalClose.toLocaleString();
+            document.getElementById('cmmsCloseOver').innerText = countOver.toLocaleString();
+            document.getElementById('cmmsCloseKpi').innerText = closeKpiPct.toFixed(2) + "%";
+
+            // 2. KPI: แจ้งซ่อมซ้ำอาการเดิมมากกว่า 30 วัน Target 100%
+            // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14)
+            const repeatTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const totalRepeat = repeatTotalRows.length;
+
+            // การ์ดงานซ้ำ: นับจากคอลัม Q (index 16) ที่มีข้อความ "ซ้ำ"
+            const countRepeat = repeatTotalRows.filter(row => getColVal(row, 16) === "ซ้ำ").length;
+
+            // การ์ด % KPI: นับจากคอลัม Q ที่มีข้อความ "ไม่ซ้ำ" หาร การ์ดงานทั้งหมด ทำเป็นเปอเซน
+            const countNotRepeat = repeatTotalRows.filter(row => getColVal(row, 16) === "ไม่ซ้ำ").length;
+            const repeatKpiPct = totalRepeat > 0 ? (countNotRepeat / totalRepeat) * 100 : 0;
+
+            document.getElementById('cmmsRepeatTotal').innerText = totalRepeat.toLocaleString();
+            document.getElementById('cmmsRepeatCount').innerText = countRepeat.toLocaleString();
+            document.getElementById('cmmsRepeatKpi').innerText = repeatKpiPct.toFixed(2) + "%";
+
+            // 3. KPI: สถานะงานแจ้งซ่อมปัจจุบัน
+            // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14)
+            const statusTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const totalStatus = statusTotalRows.length;
+
+            // การ์ดปิดงาน: นับจากคอลัม P (index 15) ที่มีข้อความ "ปิดงาน"
+            const countClosed = statusTotalRows.filter(row => getColVal(row, 15) === "ปิดงาน").length;
+
+            // การ์ดงานค้าง: นับจากคอลัม P (index 15) ที่มีข้อความ "งานค้าง"
+            const countPending = statusTotalRows.filter(row => getColVal(row, 15) === "งานค้าง").length;
+
+            document.getElementById('cmmsStatusTotal').innerText = totalStatus.toLocaleString();
+            document.getElementById('cmmsStatusClosed').innerText = countClosed.toLocaleString();
+            document.getElementById('cmmsStatusPending').innerText = countPending.toLocaleString();
+            document.getElementById('cmmsStatusRatio').innerText = `${countClosed.toLocaleString()} / ${totalStatus.toLocaleString()}`;
+        }
+
+        // ==========================================
         // SUPPORT CHARTS & TREND PERFORMANCE LINE CHART
         // ==========================================
         function renderSupportTrendChart(startDate, endDate, filteredSupport, totalRangeOpTime) {
@@ -1134,7 +1353,7 @@
             }
 
             filteredSupport.forEach(row => {
-                const d = parseThaiDate(row['วันที่']);
+                const d = parseThaiDate(row['裝'] || row['วันที่']);
                 if(d) {
                     const key = formatDateForInput(d);
                     if(dateMap[key]) {
