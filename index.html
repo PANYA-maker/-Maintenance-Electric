@@ -1861,7 +1861,7 @@
         function renderTableRecords(data) {
             const tbody = document.getElementById('tableBody'); document.getElementById('tableRecordCount').innerText = data.length.toLocaleString(); tbody.innerHTML = '';
             if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">ไม่พบรายการซ่อมตามเงื่อนไขการกรอง</td></tr>`; return; }
-            const displayData = [...data].sort((a,b) => parseThaiDate(b['วันที่']) - parseThaiDate(a['วันที่']).slice(0, 100));
+            const displayData = [...data].sort((a,b) => parseThaiDate(b['วันที่']) - parseThaiDate(a['วันที่'])).slice(0, 100);
             displayData.forEach(row => {
                 const tr = document.createElement('tr'); tr.className = "bg-white border-b hover:bg-slate-50 transition-colors";
                 let sf = parseFloat(row['จำนวนครั้งที่หยุด Actual']), st = parseFloat(row['เวลาหยุดเครื่อง Actual']), ft = "";
