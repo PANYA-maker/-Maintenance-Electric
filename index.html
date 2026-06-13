@@ -1350,10 +1350,8 @@
             // Parse dates using specialized parser to correctly understand Column A dates like "09 Jun 2026"
             let cmmsDates = cmmsRows.map(row => parseCmmsDate(getColValNoHeader(row, 0))).filter(d => d != null && !isNaN(d.getTime()));
             
+            // ปรับปรุงใหม่: ใช้เวลาปัจจุบันของวันนี้ (Today) เป็นตัวตั้งต้นย้อนหลังไป 30 วัน แทนวันล่าสุดที่มีข้อมูล
             let latestCmmsDate = new Date();
-            if (cmmsDates.length > 0) {
-                latestCmmsDate = new Date(Math.max(...cmmsDates.map(d => d.getTime())));
-            }
 
             // Calculate locked past 30 days window bounds (Gregorian internally, converted to Buddhist Era for UI display)
             const limitStartDate = new Date(latestCmmsDate.getTime() - 29 * 24 * 60 * 60 * 1000);
