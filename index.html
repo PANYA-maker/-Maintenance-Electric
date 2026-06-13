@@ -543,6 +543,16 @@
                     <i class="fa-regular fa-calendar-days mr-2"></i>ช่วงข้อมูล: - ถึง -
                 </div>
             </div>
+
+            <!-- Tab Pill Bar for Column M Repairer -->
+            <div class="mb-5 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                <label class="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2 flex items-center">
+                    <i class="fa-solid fa-user-gear mr-1.5"></i> ตัวกรองผู้ซ่อม (Column M)
+                </label>
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-thin" id="cmmsRepairerTabs">
+                    <span class="text-xs text-slate-400">กำลังโหลดรายชื่อผู้ซ่อม...</span>
+                </div>
+            </div>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- CMMS Close Within 30 Days -->
@@ -712,7 +722,8 @@
         let dailyData = [];
         let opTimeData = [];
         let supportData = [];
-        let cmmsData = []; // Store CMMS Repair records
+        let cmmsData = []; // Store CMMS Repair records as 2D array (header: false)
+        let selectedCmmsRepairer = "ALL"; // Selected CMMS repairer state (Column M)
         let charts = {};
 
         // Tab State
@@ -757,49 +768,69 @@
             return new Date(dateStr);
         }
 
-        // Dedicated CMMS date parser supporting "09 Jun 2026 17:24" formats robustly
+        // Dedicated CMMS date parser supporting English abbreviations e.g. "09 Jun 2026 17:24"
         function parseCmmsDate(dateStr) {
             if (!dateStr) return null;
-            dateStr = dateStr.trim();
+            dateStr = String(dateStr).trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
             
-            // Handle slash format e.g. "13/06/2026" or "13/06/2569"
+            const monthsMap = {
+                jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+                jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+            };
+
+            // 1. Try slash format first e.g. "13/06/2026" or "13/06/2569"
             if (dateStr.includes('/')) {
-                const parts = dateStr.split('/');
-                if (parts.length === 3) {
-                    let year = parseInt(parts[2]);
+                const slashParts = dateStr.split('/');
+                if (slashParts.length === 3) {
+                    const day = parseInt(slashParts[0], 10);
+                    const month = parseInt(slashParts[1], 10) - 1;
+                    let year = parseInt(slashParts[2].split(/\s+/)[0], 10); // ignore time
                     if (year > 2500) year -= 543;
-                    let month = parseInt(parts[1]) - 1;
-                    let day = parseInt(parts[0]);
                     return new Date(year, month, day);
                 }
             }
-            
-            // Handle space-separated format e.g. "09 Jun 2026 17:24" or "09 Jun 2026"
-            const parts = dateStr.split(/\s+/);
-            if (parts.length >= 3) {
-                const day = parseInt(parts[0]);
-                const monthStr = parts[1].toLowerCase().substring(0, 3);
-                let year = parseInt(parts[2]);
-                if (year > 2500) year -= 543;
+
+            // 2. Try space-separated format e.g. "09 Jun 2026 17:24" or "09 Jun 2026"
+            const spaceParts = dateStr.split(/\s+/);
+            if (spaceParts.length >= 3) {
+                let day = parseInt(spaceParts[0], 10);
+                let monthStr = spaceParts[1].toLowerCase().substring(0, 3);
+                let year = parseInt(spaceParts[2], 10);
                 
-                const monthsMap = {
-                    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-                    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
-                };
-                
-                if (day && monthStr in monthsMap && year) {
-                    const month = monthsMap[monthStr];
+                // If day is not a valid number or looks like a month, try swapping (e.g. "Jun 09 2026")
+                if (isNaN(day) || day > 31) {
+                    const tempMonth = spaceParts[0].toLowerCase().substring(0, 3);
+                    if (tempMonth in monthsMap) {
+                        monthStr = tempMonth;
+                        day = parseInt(spaceParts[1], 10);
+                        year = parseInt(spaceParts[2], 10);
+                    }
+                }
+
+                if (!isNaN(day) && (monthStr in monthsMap) && !isNaN(year)) {
+                    if (year > 2500) year -= 543;
+                    return new Date(year, monthsMap[monthStr], day);
+                }
+            }
+
+            // 3. Try dash format e.g. "2026-06-09"
+            if (dateStr.includes('-')) {
+                const dashParts = dateStr.split('-');
+                if (dashParts.length === 3) {
+                    let year = parseInt(dashParts[0], 10);
+                    const month = parseInt(dashParts[1], 10) - 1;
+                    const day = parseInt(dashParts[2].split(/\s+/)[0], 10);
+                    if (year > 2500) year -= 543;
                     return new Date(year, month, day);
                 }
             }
-            
-            const standardParsed = new Date(dateStr);
-            if (!isNaN(standardParsed.getTime())) {
-                let y = standardParsed.getFullYear();
-                if (y > 2500) {
-                    standardParsed.setFullYear(y - 543);
-                }
-                return standardParsed;
+
+            // Fallback to standard JS Date parser
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                let y = d.getFullYear();
+                if (y > 2500) d.setFullYear(y - 543);
+                return d;
             }
             
             return null;
@@ -896,10 +927,10 @@
                 supportErr = e.message || "Failed Network Handshake";
             }
 
-            // Test CMMS Sheet Load
+            // Test CMMS Sheet Load using dedicated array parser (ignores headers, immune to duplicate headers or BOM bugs)
             const URL_CMMS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTxXQbTmD1pVBH_p1P61c3S5B_SreSyN9DM8onU7NX1mZ92E-8923rM8yVeuex59cQpSUV1Mql0NM8n/pub?gid=318172741&single=true&output=csv";
             try {
-                cmmsData = await fetchCSV(URL_CMMS);
+                cmmsData = await fetchCSVNoHeader(URL_CMMS);
                 cmmsOk = cmmsData.length > 0;
             } catch (e) {
                 cmmsErr = e.message || "Failed Network Handshake";
@@ -1242,7 +1273,7 @@
             const fStatus = document.getElementById('supFilterStatus').value;
 
             const filteredSupport = supportData.filter(row => {
-                const rDate = parseThaiDate(row['วันที่']);
+                const rDate = parseThaiDate(row['裝'] || row['วันที่']);
                 if(!rDate || isNaN(rDate)) return false;
                 return (rDate >= startDate && rDate <= endDate) &&
                        (fDept === 'ALL' || row['หน่วยงาน'] === fDept) &&
@@ -1307,15 +1338,17 @@
         function updateCmmsSummary() {
             if (!cmmsData || cmmsData.length === 0) return;
 
-            // Safe utility to read column value by index (resilient to dynamic header/BOM mutations)
-            const getColVal = (row, colIndex) => {
-                const keys = Object.keys(row);
-                if (keys.length <= colIndex) return "";
-                return row[keys[colIndex]] ? row[keys[colIndex]].trim() : "";
+            // Clean data rows (skipping index 0 which is the header, and removing empty rows)
+            const cmmsRows = cmmsData.slice(1).filter(row => row && row.length > 0 && row[0]);
+
+            // Safe utility to read column value by index (immune to header mutations)
+            const getColValNoHeader = (row, colIndex) => {
+                if (!row || row.length <= colIndex) return "";
+                return row[colIndex] ? String(row[colIndex]).trim() : "";
             };
 
-            // Parse dates using specialized parser to correctly understand Column A dates like "09 Jun 2026 17:24"
-            let cmmsDates = cmmsData.map(row => parseCmmsDate(getColVal(row, 0))).filter(d => d != null && !isNaN(d.getTime()));
+            // Parse dates using specialized parser to correctly understand Column A dates like "09 Jun 2026"
+            let cmmsDates = cmmsRows.map(row => parseCmmsDate(getColValNoHeader(row, 0))).filter(d => d != null && !isNaN(d.getTime()));
             
             let latestCmmsDate = new Date();
             if (cmmsDates.length > 0) {
@@ -1335,28 +1368,76 @@
             document.getElementById('cmmsDateRangeText').innerHTML = `<i class="fa-regular fa-calendar-days mr-2"></i>ช่วงข้อมูล: ${formatThDate(limitStartDate)} ถึง ${formatThDate(limitEndDate)}`;
 
             // Filter raw CMMS data solely by this locked date range
-            const cmmsFiltered = cmmsData.filter(row => {
-                const rDate = parseCmmsDate(getColVal(row, 0));
+            const cmmsInWindow = cmmsRows.filter(row => {
+                const rDate = parseCmmsDate(getColValNoHeader(row, 0));
                 if (!rDate || isNaN(rDate.getTime())) return false;
                 return rDate >= limitStartDate && rDate <= limitEndDate;
             });
 
+            // Extract unique repairers from Column M (index 12) inside this 30-day window
+            const uniqueRepairers = [...new Set(cmmsInWindow.map(row => getColValNoHeader(row, 12)).filter(val => val !== ""))].sort();
+
+            // Self-correction safeguard: if selected repairer is not in current active 30-day pool, reset to ALL
+            if (selectedCmmsRepairer !== "ALL" && !uniqueRepairers.includes(selectedCmmsRepairer)) {
+                selectedCmmsRepairer = "ALL";
+            }
+
+            // Render horizontal scrollable tabs/pills for repairers
+            const tabsContainer = document.getElementById('cmmsRepairerTabs');
+            if (tabsContainer) {
+                tabsContainer.innerHTML = '';
+                
+                // "ผู้ซ่อมทั้งหมด" Button
+                const allBtn = document.createElement('button');
+                allBtn.type = 'button';
+                allBtn.className = selectedCmmsRepairer === "ALL"
+                    ? "bg-indigo-600 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm"
+                    : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all";
+                allBtn.innerHTML = `<i class="fa-solid fa-users mr-1"></i> ผู้ซ่อมทั้งหมด`;
+                allBtn.onclick = () => {
+                    selectedCmmsRepairer = "ALL";
+                    updateCmmsSummary();
+                };
+                tabsContainer.appendChild(allBtn);
+
+                // Specific Repairers
+                uniqueRepairers.forEach(rep => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = selectedCmmsRepairer === rep
+                        ? "bg-indigo-600 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm"
+                        : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all";
+                    btn.innerText = rep;
+                    btn.onclick = () => {
+                        selectedCmmsRepairer = rep;
+                        updateCmmsSummary();
+                    };
+                    tabsContainer.appendChild(btn);
+                });
+            }
+
+            // Filter CMMS data by selected repairer (if selected is not ALL)
+            const cmmsFiltered = cmmsInWindow.filter(row => {
+                if (selectedCmmsRepairer === "ALL") return true;
+                return getColValNoHeader(row, 12) === selectedCmmsRepairer;
+            });
+
             // 1. KPI: ปิดใบงานแจ้งซ่อมภายใน 30 วัน Target 100%
             // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14) ที่มีค่าไม่ว่าง
-            const closeTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const closeTotalRows = cmmsFiltered.filter(row => getColValNoHeader(row, 14) !== "");
             const totalClose = closeTotalRows.length;
 
             // การ์ดงานเกินกำหนด: นับจากคอลัม N (index 13) ที่มีข้อความ "เกินกำหนด"
-            const countOver = closeTotalRows.filter(row => getColVal(row, 13) === "เกินกำหนด").length;
+            const countOver = closeTotalRows.filter(row => getColValNoHeader(row, 13) === "เกินกำหนด").length;
 
             // การ์ด % KPI: นับจากคอลัม N ที่มีข้อความ "ไม่เกินกำหนด" หาร การ์ดงานทั้งหมด ทำเป็นเปอร์เซ็นต์
-            const countNotOver = closeTotalRows.filter(row => getColVal(row, 13) === "ไม่เกินกำหนด").length;
+            const countNotOver = closeTotalRows.filter(row => getColValNoHeader(row, 13) === "ไม่เกินกำหนด").length;
             const closeKpiPct = totalClose > 0 ? (countNotOver / totalClose) * 100 : 0;
 
             document.getElementById('cmmsCloseTotal').innerText = totalClose.toLocaleString();
             document.getElementById('cmmsCloseOver').innerText = countOver.toLocaleString();
             
-            // Set success percentage and text color based on 100% goal achievement dynamically
+            // Set success percentage and text color based on 100% goal achievement (Green if >= 100%, else Red)
             const elCloseKpi = document.getElementById('cmmsCloseKpi');
             elCloseKpi.innerText = closeKpiPct.toFixed(2) + "%";
             if (closeKpiPct >= 100) {
@@ -1367,20 +1448,20 @@
 
             // 2. KPI: แจ้งซ่อมซ้ำอาการเดิมมากกว่า 30 วัน Target 100%
             // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14)
-            const repeatTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const repeatTotalRows = cmmsFiltered.filter(row => getColValNoHeader(row, 14) !== "");
             const totalRepeat = repeatTotalRows.length;
 
             // การ์ดงานซ้ำ: นับจากคอลัม Q (index 16) ที่มีข้อความ "ซ้ำ"
-            const countRepeat = repeatTotalRows.filter(row => getColVal(row, 16) === "ซ้ำ").length;
+            const countRepeat = repeatTotalRows.filter(row => getColValNoHeader(row, 16) === "ซ้ำ").length;
 
             // การ์ด % KPI: นับจากคอลัม Q ที่มีข้อความ "ไม่ซ้ำ" หาร การ์ดงานทั้งหมด ทำเป็นเปอร์เซ็นต์
-            const countNotRepeat = repeatTotalRows.filter(row => getColVal(row, 16) === "ไม่ซ้ำ").length;
+            const countNotRepeat = repeatTotalRows.filter(row => getColValNoHeader(row, 16) === "ไม่ซ้ำ").length;
             const repeatKpiPct = totalRepeat > 0 ? (countNotRepeat / totalRepeat) * 100 : 0;
 
             document.getElementById('cmmsRepeatTotal').innerText = totalRepeat.toLocaleString();
             document.getElementById('cmmsRepeatCount').innerText = countRepeat.toLocaleString();
 
-            // Set repeat percentage and text color based on 100% goal achievement dynamically
+            // Set repeat percentage and text color based on 100% goal achievement (Green if >= 100%, else Red)
             const elRepeatKpi = document.getElementById('cmmsRepeatKpi');
             elRepeatKpi.innerText = repeatKpiPct.toFixed(2) + "%";
             if (repeatKpiPct >= 100) {
@@ -1391,14 +1472,14 @@
 
             // 3. KPI: สถานะงานแจ้งซ่อมปัจจุบัน
             // การ์ดงานทั้งหมด: นับจากคอลัม O (index 14)
-            const statusTotalRows = cmmsFiltered.filter(row => getColVal(row, 14) !== "");
+            const statusTotalRows = cmmsFiltered.filter(row => getColValNoHeader(row, 14) !== "");
             const totalStatus = statusTotalRows.length;
 
             // การ์ดปิดงาน: นับจากคอลัม P (index 15) ที่มีข้อความ "ปิดงาน"
-            const countClosed = statusTotalRows.filter(row => getColVal(row, 15) === "ปิดงาน").length;
+            const countClosed = statusTotalRows.filter(row => getColValNoHeader(row, 15) === "ปิดงาน").length;
 
             // การ์ดงานค้าง: นับจากคอลัม P (index 15) ที่มีข้อความ "งานค้าง"
-            const countPending = statusTotalRows.filter(row => getColVal(row, 15) === "งานค้าง").length;
+            const countPending = statusTotalRows.filter(row => getColValNoHeader(row, 15) === "งานค้าง").length;
 
             document.getElementById('cmmsStatusTotal').innerText = totalStatus.toLocaleString();
             document.getElementById('cmmsStatusClosed').innerText = countClosed.toLocaleString();
@@ -1826,6 +1907,19 @@
                         // Crucial Fix: Clean up invisible UTF-8 BOM and leading/trailing spaces
                         return header.replace(/^\ufeff/, "").trim();
                     },
+                    complete: r => res(r.data), 
+                    error: e => rej(e) 
+                }); 
+            }); 
+        }
+
+        // Fetch CSV without parsing headers (returns array of arrays for total order safety)
+        function fetchCSVNoHeader(url) { 
+            return new Promise((res, rej) => { 
+                Papa.parse(url, { 
+                    download: true, 
+                    header: false, 
+                    skipEmptyLines: 'greedy', 
                     complete: r => res(r.data), 
                     error: e => rej(e) 
                 }); 
